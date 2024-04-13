@@ -1,0 +1,7 @@
+logs/
+config.json
+lookup.json
+node_modules/
+msg.json
+user.json
+notems.js
