@@ -299,7 +299,7 @@ var COMMANDS = {
       }
       let text = args
       let to = text.shift().replace("@","")
-      if (text && to.length < 25) {
+      if (text && /^[a-zA-Z0-9_]{1,24}$/.test(to)) {
         messages.push({
           "l":"n",
           "t":to,
@@ -325,7 +325,7 @@ var COMMANDS = {
       }
       let text = args
       let to = text.shift()
-      if (text && to.length == 6) {
+      if (text && /^[a-zA-Z0-9+/]{6}$/.test(to)) {
         messages.push({
           "l":"t",
           "t":to,
@@ -351,7 +351,7 @@ var COMMANDS = {
       }
       let text = args
       let to = text.shift()
-      if (text && to.length == 15) {
+      if (text && /^[a-zA-Z0-9+/]{15}$/.test(to)) {
         messages.push({
           "l":"h",
           "t":to,
