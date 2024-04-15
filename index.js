@@ -613,25 +613,7 @@ ws.onmessage=(e)=>{
       console.error(error);
     }
   });
-  //屏蔽
-  if (nicks.includes(hc.nick)) if (config.ignore.hash.includes(getInfo(hc.nick).hash) || config.ignore.nick.includes(hc.nick)) return;
-  //why did you call yourself
-  if (hc.cmd == "chat" && hc.text.replace("@","").trim() == hc.nick) _send({cmd:'chat',text:'why did you call yourself'})
-  //灵魂支持
-  if (hc.cmd == "chat" && hc.text.length < 152 && hc.nick != myNick) historys.push(hc.text)
-  if (hc.cmd == "chat" && getRandomNumber(1,30) == 1 && hc.nick != myNick) qyk(hc.text)
-  if (hc.cmd == "chat" && getRandomNumber(1,30) == 1 && hc.nick != myNick) _send({cmd:'chat',text:hc.nick + getRandomItemFromArray(['最可爱了','是小天使'])})
-  if (hc.cmd == "onlineAdd") {
-    if (getRandomNumber(0,1) == 1) {
-      yiyan(getRandomItemFromArray(["$w在$f中写道，$t","$t","$w说过，$t","细品$w写的$f","$w写道，$t","昔日，$t","$1，你可曾知道$w","$1，你可曾了解$f","$1，你可曾知晓，$t"]).replace("$1",hc.nick))
-    } else {
-      var welc = ["hey, $1","hello, $1","早上好，$1！","出现了，$1！","hi, $1","中午好，$1","下午好，$1~","晚上好，$1！","你好诶，$1，新的一天也要加油哦！"]
-      _send({
-        cmd: 'chat',
-        text: getRandomItemFromArray(welc).replace("$1",hc.nick)
-      })
-    }
-  }
+
   //users和nicks变量支持
   if (hc.cmd == "onlineSet") {
     users = hc.users
@@ -681,6 +663,28 @@ ws.onmessage=(e)=>{
     lookup = Array.from(lookup).map(JSON.parse);
     saveLookup()
   }
+
+
+  //屏蔽
+  if (nicks.includes(hc.nick)) if (config.ignore.hash.includes(getInfo(hc.nick).hash) || config.ignore.nick.includes(hc.nick)) return;
+  //why did you call yourself
+  if (hc.cmd == "chat" && hc.text.replace("@","").trim() == hc.nick) _send({cmd:'chat',text:'why did you call yourself'})
+  //灵魂支持
+  if (hc.cmd == "chat" && hc.text.length < 152 && hc.nick != myNick) historys.push(hc.text)
+  if (hc.cmd == "chat" && getRandomNumber(1,30) == 1 && hc.nick != myNick) qyk(hc.text)
+  if (hc.cmd == "chat" && getRandomNumber(1,30) == 1 && hc.nick != myNick) _send({cmd:'chat',text:hc.nick + getRandomItemFromArray(['最可爱了','是小天使'])})
+  if (hc.cmd == "onlineAdd") {
+    if (getRandomNumber(0,1) == 1) {
+      yiyan(getRandomItemFromArray(["$w在$f中写道，$t","$t","$w说过，$t","细品$w写的$f","$w写道，$t","昔日，$t","$1，你可曾知道$w","$1，你可曾了解$f","$1，你可曾知晓，$t"]).replace("$1",hc.nick))
+    } else {
+      var welc = ["hey, $1","hello, $1","早上好，$1！","出现了，$1！","hi, $1","中午好，$1","下午好，$1~","晚上好，$1！","你好诶，$1，新的一天也要加油哦！"]
+      _send({
+        cmd: 'chat',
+        text: getRandomItemFromArray(welc).replace("$1",hc.nick)
+      })
+    }
+  }
+
   //青云客
   if (hc.cmd == "chat" && hc.text.indexOf("@"+myNick) != -1 && hc.nick != myNick) { 
     let semsg = hc.text.replace("@"+myNick,"").trim()
