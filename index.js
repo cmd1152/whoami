@@ -553,7 +553,7 @@ ws.onopen=()=>{
   console.log("登入中")
   _send({
     cmd: 'join',
-    channel: 'loungee',
+    channel: 'lounge',
     nick: myNick,
     password: config.password
   },true)
