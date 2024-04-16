@@ -11,4 +11,5 @@ pm2 start index.js
 ```
 ~~然后就部署到了 https://hach.chat/?loungee ，这是伪authtrip跳锁房策略，请联系 https://hach.chat/?lounge 有这个频道MoveBot的人执行 `.allow 你的bot名称`~~
 
-~~当然，你可以修改频道名称，~~直接加入 lounge
+
+现在是直接加入 lounge
