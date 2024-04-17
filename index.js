@@ -584,7 +584,10 @@ function isRL(cmd) {
       cmd.nowRL = new Date().getTime()
       return false
     }
-    if (cmd.nowRL + cmd.rl < new Date().getTime()) return false;
+    if (cmd.nowRL + cmd.rl < new Date().getTime()) {
+      cmd.nowRL = new Date().getTime()
+      return false;
+    }
     return true;
   } else return false;
 }
