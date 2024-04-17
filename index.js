@@ -11,6 +11,7 @@ let lookup = []
 let waitsend = []
 let messages = []
 let userList = []
+var users_ = [] ,nicks = []//持久化users、nicks
 let config = { //默认数据结构
   modtrip: ["cmdTV+"],
   password: "",
@@ -377,8 +378,8 @@ var COMMANDS = {
         back("参数无效")
         return;
       }
-      if (nicks.includes(args[0].replace("@",""))) {
-        let userinf_ = getInfo(args[0].replace("@",""))
+      if (nicks_.includes(args[0].replace("@",""))) {
+        let userinf_ = getInfo(args[0].replace("@",""),true)
         let othern = "用户未设定，应该是默认的 6684e1（普通用户）"
         if (userinf_.uType == "mod") othern = "用户未设定，应该是默认的 1fad83（管理员）"
         if (userinf_.uType == "admin") othern = "用户未设定，应该是默认的 d73737（站长）"
@@ -387,7 +388,7 @@ var COMMANDS = {
           userinf_.color = userinf_.color + "（但是可能显示是 rainbow，因为jeb_名称颜色彩蛋优先级高）"
         }
         back(`### ${args[0].replace("@","")} 的信息：\n识别码：${userinf_.trip}\n用户类型：${userinf_.uType}\nhash：${userinf_.hash}\n等级：${userinf_.level}\n用户标识符：${userinf_.userid}\n名称颜色：${userinf_.color||othern}\n\nTA最后说了${lastsay[args[0].replace("@","")]?"："+lastsay[args[0].replace("@","")].substring(0,50)+`${lastsay[args[0].replace("@","")].length>50?"...":""}`:"什么我也不知道 awa"}`)
-      } else back(`这个用户不在线\nTA最后说了${lastsay[args[0].replace("@","")]?"："+lastsay[args[0].replace("@","")].substring(0,50)+`${lastsay[args[0].replace("@","")].length>50?"...":""}`:"什么我也不知道 awa"}`)
+      } else back(`我没有记录到这个用户`)
     },
     help: '显示一个用户的信息',
     useage: '[用户名称]',
@@ -575,8 +576,8 @@ ws.onopen=()=>{
   },10000)
   setTimeout(sendHistory,getRandomNumber(600000,1000000))
 }
-function getInfo(usernick) {
-  return users.find(user=>{return user.nick == usernick})
+function getInfo(usernick,c=false) {
+  return c?users_.find(user=>{return user.nick == usernick}):users.find(user=>{return user.nick == usernick})
 }
 function isRL(cmd) {
   if (cmd) {
@@ -603,7 +604,11 @@ function sendHistory() {
 ws.onmessage=(e)=>{
   var hc = JSON.parse(e.data);
   if (hc.channel) {
-    if (hc.channel != "lounge" && hc.channel != "loungee") ws.close()
+    if (hc.channel != "lounge") {
+      setTimeout(()=>{
+        ws.close()
+      },3000)
+    }
   }
   if (hc.cmd == "warn" && hc.text == "Unknown command: /" && checkChannel) {
     checkChannel = false
@@ -628,12 +633,16 @@ ws.onmessage=(e)=>{
   if (hc.cmd == "onlineSet") {
     users = hc.users
     nicks = hc.nicks
+    users_ = hc.users
+    nicks_ = hc.nicks
   }
   if (hc.cmd == "onlineAdd") {
     let payload = {...hc}
     delete payload.cmd
     users.push(payload)
     nicks.push(hc.nick)
+    users_.push(payload)
+    nicks_.push(hc.nick)
   }
   if (hc.cmd == "onlineRemove") {
     users = users.filter(function (item) {
@@ -676,7 +685,8 @@ ws.onmessage=(e)=>{
 
 
   //屏蔽
-  if (nicks.includes(hc.nick)) if (config.ignore.hash.includes(getInfo(hc.nick).hash) || config.ignore.nick.includes(hc.nick)) return;
+  if (nicks.includes(hc.nick) && getInfo(hc.nick)) if (config.ignore.hash.includes(getInfo(hc.nick).hash) || config.ignore.nick.includes(hc.nick)) return;
+  if (nicks.includes(hc.from) && getInfo(hc.from)) if (config.ignore.hash.includes(getInfo(hc.from).hash) || config.ignore.nick.includes(hc.from)) return;
 
   //弱密码警告
   if (hc.cmd == "onlineAdd" && hc.trip) {
