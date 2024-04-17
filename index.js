@@ -18,7 +18,8 @@ let config = { //默认数据结构
   ignore: {
     hash:[],
     nick:[]
-  }
+  },
+  r18: true
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 
@@ -443,20 +444,25 @@ var COMMANDS = {
   },
   setu: {
     run: (args,obj,userinfo,whisper,back) => {
-      axios.get(`https://api.lolicon.app/setu/v2${args[0]?"?tag="+encodeURIComponent(args.join(" ")):""}`)
+      if (!config.r18 && args.join(" ").indexOf("[NSFW]")!=-1) {
+        back('NSFW在配置文件中禁用')
+        return;
+      }
+      let ses = []
+      if (args.join(" ").replace("[NSFW]","")) ses.push("tag="+encodeURIComponent(args.join(" ")).replace("[NSFW]",""))
+      if (args.join(" ").indexOf("[NSFW]") != -1) ses.push("r18=1")
+      axios.get(`https://api.lolicon.app/setu/v2${ses.length > 0?"?" + ses.join("&"):""}`)
       .then((_4w4)=>{
         let _404 = _4w4.data.data
-        if (_404) {
-          _404 = _404[0]
-          let etags = _404.tags.filter((tag)=>{return !(/[乳魅内尻屁胸]/.test(tag))})
-          back(`![](${_404.urls.original})\n[${_404.title}](https://www.pixiv.net/artworks/${_404.pid}) —— ${_404.author}\n标签：${etags.join(", ")}`)
-        } else back("要求太大了吧qwq")
+        _404 = _404[0]
+        let etags = _404.tags.filter((tag)=>{return (args.join(" ").indexOf("[NSFW]")!=-1 || !(/[乳魅内尻屁胸]/.test(tag)))})
+        back(`![](${_404.urls.original})\n[${_404.title}](https://www.pixiv.net/artworks/${_404.pid}) —— ${_404.author}\n标签：${etags.join(", ")}`)
       })
       .catch((e)=>{
         back("QAQ")
       })
     },
-    help: '随机找张瑟图，参考自awa_ya',
+    help: '随机找张瑟图，参考自awa_ya，在标签内添加`[NSFW]`启用r18，记住一定要加中括号，而且是英文的！！！',
     useage: '<标签>',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 10000
