@@ -20,6 +20,7 @@ let config = { //默认数据结构
     nick:[]
   }
 }
+let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 
 let lastsay = {}
 function getRandomItemFromArray(arr) {
@@ -620,7 +621,7 @@ ws.onmessage=(e)=>{
     nicks = hc.nicks
   }
   if (hc.cmd == "onlineAdd") {
-    let payload = hc
+    let payload = {...hc}
     delete payload.cmd
     users.push(payload)
     nicks.push(hc.nick)
@@ -633,7 +634,7 @@ ws.onmessage=(e)=>{
     if (index !== -1) nicks.splice(index, 1);
   }
   if (hc.cmd == "updateUser") {
-    let payload = hc
+    let payload = {...hc}
     delete payload.cmd
     users = users.filter(function (item) {
       return item.nick !== hc.nick;
@@ -667,6 +668,20 @@ ws.onmessage=(e)=>{
 
   //屏蔽
   if (nicks.includes(hc.nick)) if (config.ignore.hash.includes(getInfo(hc.nick).hash) || config.ignore.nick.includes(hc.nick)) return;
+
+  //弱密码警告
+  if (hc.cmd == "onlineAdd" && hc.trip) {
+    for (let key in nosafetrip) {
+      if (nosafetrip[key][0] == hc.trip) {
+        _send({
+          cmd: 'chat',
+          text: `@${hc.nick} 嘿，你的识别码密码可能并不安全，请不要使用\`${nosafetrip[key][1]}\`继续当你的密码了，容易泄露被冒充！`
+        })
+      }
+    }
+  }
+
+
   //why did you call yourself
   if (hc.cmd == "chat" && hc.text.replace("@","").trim() == hc.nick) _send({cmd:'chat',text:'why did you call yourself'})
   //灵魂支持
