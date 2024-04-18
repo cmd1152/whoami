@@ -637,7 +637,7 @@ ws.onmessage=(e)=>{
         if (!joined) {
           setTimeout(()=>{
             ws.close()         //草，什么死人嵌套
-          },30000)
+          },65000)
         }
       },3000)
     }
