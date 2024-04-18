@@ -11,6 +11,7 @@ let lookup = []
 let waitsend = []
 let messages = []
 let userList = []
+let joined = false
 var users_ = [] ,nicks = []//持久化users、nicks
 let config = { //默认数据结构
   modtrip: ["cmdTV+"],
@@ -561,7 +562,7 @@ ws.onopen=()=>{
   console.log("登入中")
   _send({
     cmd: 'join',
-    channel: 'lounge',
+    channel: 'loungee',
     nick: myNick,
     password: config.password
   },true)
@@ -604,7 +605,7 @@ function sendHistory() {
 ws.onmessage=(e)=>{
   var hc = JSON.parse(e.data);
   if (hc.channel) {
-    if (hc.channel != "lounge") {
+    if (hc.channel != "lounge" && hc.channel != "loungee") {
       setTimeout(()=>{
         ws.close()
       },3000)
@@ -628,6 +629,20 @@ ws.onmessage=(e)=>{
       console.error(error);
     }
   });
+  //加入检查
+  if (hc.cmd == "warn" || hc.cmd == "info") {
+    //3秒后还没有onlineSet就是死了
+    if (!joined) {
+      setTimeout(()=>{
+        if (!joined) {
+          setTimeout(()=>{
+            ws.close()         //草，什么死人嵌套
+          },30000)
+        }
+      },3000)
+    }
+  }
+  if (hc.cmd == "onlineSet") joined = true
 
   //users和nicks变量支持
   if (hc.cmd == "onlineSet") {
@@ -641,6 +656,9 @@ ws.onmessage=(e)=>{
     delete payload.cmd
     users.push(payload)
     nicks.push(hc.nick)
+    users_ = users_.filter(function (item) {
+      return item.nick !== hc.nick;
+    });
     users_.push(payload)
     nicks_.push(hc.nick)
   }
@@ -658,6 +676,11 @@ ws.onmessage=(e)=>{
       return item.nick !== hc.nick;
     });
     users.push(payload)
+
+    users_ = users_.filter(function (item) {
+      return item.nick !== hc.nick;
+    });
+    users_.push(payload)
   }
   //lookup数据库支持
   if (hc.cmd == "onlineAdd") {
