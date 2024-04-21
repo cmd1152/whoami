@@ -561,14 +561,14 @@ var COMMANDS = {
             saveConfig()
           } else {
             if (config.bans[args[0]].length > 0) {
-              back(`${args[0]} 封禁表达式列表：\`${config.bans[args[0]].join("`, `")}\``)
-            } else back(`${args[0]} 封禁表达式列表还是空的`)
+              back(`${args[0]} 封禁正则表达式列表：\`${config.bans[args[0]].join("`, `")}\``)
+            } else back(`${args[0]} 封禁正则表达式列表还是空的`)
           }
         } else back("哥，不是这样子用")
       } else back("哥，看下帮助，这个命令有点小难")
     },
-    help: '按表达式封禁一个名称、识别码、用户名称，不加表达式为列出，再添加一次已经添加的表达式为删除',
-    useage: '[nick/trip/hash] <表达式> <表达式标志字符串>',
+    help: '按正则表达式封禁一个名称、识别码、用户名称，不加正则表达式为列出，再添加一次已经添加的正则表达式为删除',
+    useage: '[nick/trip/hash] <正则表达式> <正则表达式标志字符串>',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
   }
