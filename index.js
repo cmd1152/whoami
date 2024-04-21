@@ -490,7 +490,7 @@ var COMMANDS = {
     run: (args,obj,userinfo,whisper,back) => {
       let kicklist = []
       let info = []
-      args = args.map(arg=>{return arg.replace("@","")})
+      args = args.join(" ").match(/[a-zA-Z0-9_]{1,24}/g)
       args = args.filter(a=>{return a})
       args = [...new Set(args)]
       args.forEach(arg=>{
