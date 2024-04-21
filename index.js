@@ -575,8 +575,11 @@ var COMMANDS = {
 
 function testRegExps(RegExps, content) {
   for (let expression of RegExps) {
-    const regex = new RegExp(expression[0], expression[1]);
-    if (regex.test(content)) return true;
+    try {
+      let regex = regex = new RegExp(expression[0])
+      if (expression[1]) regex = new RegExp(expression[0], expression[1])
+      if (regex.test(content)) return true;
+    } catch (e) {}
   }
   return false;
 }
