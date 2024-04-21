@@ -502,7 +502,11 @@ var COMMANDS = {
           } else if (getInfo(arg).trip == userinfo.trip) {
             if (getInfo(arg).trip) {
               kicklist.push(arg)
-            } else info.push(`踢出 ${arg} 失败：你不能证明他是你，他没有识别码`)
+            } else if (arg == userinfo.nick) {
+              kicklist.push(arg)
+            } else {
+              info.push(`踢出 ${arg} 失败：你不能证明他是你，他没有识别码`)
+            }
           } else {
             if (config.modtrip.includes(userinfo.trip)) {
               info.push(`踢出 ${arg} 失败：你只能踢出同识别码的授权用户`)
