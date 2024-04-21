@@ -500,7 +500,9 @@ var COMMANDS = {
           if (config.modtrip.includes(userinfo.trip) && !config.modtrip.includes(getInfo(arg).trip)) {
             kicklist.push(arg)
           } else if (getInfo(arg).trip == userinfo.trip) {
-            kicklist.push(arg)
+            if (getInfo(arg).trip) {
+              kicklist.push(arg)
+            } else info.push(`踢出 ${arg} 失败：你不能证明他是你，他没有识别码`)
           } else {
             if (config.modtrip.includes(userinfo.trip)) {
               info.push(`踢出 ${arg} 失败：你只能踢出同识别码的授权用户`)
