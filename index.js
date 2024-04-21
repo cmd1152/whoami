@@ -21,7 +21,12 @@ let config = { //默认数据结构
     hash:[],
     nick:[]
   },
-  r18: true
+  r18: true,
+  bans: {
+    nick: [],
+    trip: [],
+    hash: []
+  }
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 
@@ -538,9 +543,64 @@ var COMMANDS = {
     useage: '[用户1] <用户2> <用户3> <...>',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  ban: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (args[0]) {
+        if (['nick','hash','trip'].includes(args[0])) { //我感觉我是天才
+          //config.bans[args[0]] // 我感觉我是天才
+          if (args[1]) {
+            if (config.bans[args[0]].includes(args[1])) {
+              let index = config.bans[args[0]].indexOf(args[1]);
+              if (index !== -1) config.bans[args[0]].splice(index, 1);
+              back(`删除成功`)
+            } else {
+              config.bans[args[0]].push([args[1],args[2]])
+              back(`添加成功`)
+            }
+            saveConfig()
+          } else {
+            if (config.bans[args[0]].length > 0) {
+              back(`${args[0]} 封禁表达式列表：\`${config.bans[args[0]].join("`, `")}\``)
+            } else back(`${args[0]} 封禁表达式列表还是空的`)
+          }
+        } else back("哥，不是这样子用")
+      } else back("哥，看下帮助，这个命令有点小难")
+    },
+    help: '按表达式封禁一个名称、识别码、用户名称，不加表达式为列出，再添加一次已经添加的表达式为删除',
+    useage: '[nick/trip/hash] <表达式> <表达式标志字符串>',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
+function testRegExps(RegExps, content) {
+  for (let expression of RegExps) {
+    const regex = new RegExp(expression[0], expression[1]);
+    if (regex.test(content)) return true;
+  }
+  return false;
+}
+//封禁用户Interval
+setInterval(()=>{
+  let kickuser = []
+  users.forEach((user)=>{
+    if (
+      testRegExps(config.bans.nick,user.nick) ||
+      testRegExps(config.bans.trip,user.trip) ||
+      testRegExps(config.bans.hash,user.hash)
+    ) {
+      if (!config.modtrip.includes(user.trip)) kickuser.push(user.nick)
+    }
+  })
+  if (kickuser.length > 0) {
+    _send({
+      cmd: 'whisper',
+      nick: 'mbot',
+      text: `kick ${kickuser.join(" ")}`
+    })
+  }
+},1000)
 
 console.log("正在连接到服务器……");
 var ws = new websocket("wss://hack.chat/chat-ws");
