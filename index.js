@@ -485,6 +485,53 @@ var COMMANDS = {
     useage: '[代码]',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 10000
+  },
+  kick: {
+    run: (args,obj,userinfo,whisper,back) => {
+      let kicklist = []
+      let info = []
+      args = args.map(arg=>{return arg.replace("@","")})
+      args = args.filter(a=>{return a})
+      args = [...new Set(args)]
+      args.forEach(arg=>{
+        if (arg == myNick) {
+          info.push(`踢出 ${arg} 失败：我何德何能`)
+        } else if (getInfo(arg)) {
+          if (config.modtrip.includes(userinfo.trip) && !config.modtrip.includes(getInfo(arg).trip)) {
+            kicklist.push(arg)
+          } else if (getInfo(arg).trip == userinfo.trip) {
+            kicklist.push(arg)
+          } else {
+            if (config.modtrip.includes(userinfo.trip)) {
+              info.push(`踢出 ${arg} 失败：你只能踢出同识别码的授权用户`)
+            } else info.push(`踢出 ${arg} 失败：你只能踢出同识别码的人`)
+          }
+        } else info.push(`踢出 ${arg} 失败：未找到`)
+      })
+      if (kicklist.length > 0) {
+        _send({
+          cmd: 'whisper',
+          nick: 'mbot',
+          text: `kick ${kicklist.join(" ")}`
+        },true)
+      }
+      if (info.length > 0) {
+        if (info.join("\n").length > 30) {
+          let notepath = `message${Math.floor(Math.random()*99999999999999999-10000000000000000)+10000000000000000}`
+          notems.set(notepath,info.join("\n"))
+            .then(()=>{
+              back(`在踢出一个或多个用户时可能遇到大量问题，[点此查看](https://note.ms/${notepath})`)
+            })
+            .catch(()=>{
+              back(`在踢出一个或多个用户时可能遇到大量问题，但是不能正确向您报告问题`)
+            })
+        } else back(`在踢出一个或多个用户时可能遇到问题\n${info.join("\n")}`)
+      }
+    },
+    help: '踢出一个或多个用户，非授权用户只能踢出相同识别码的人',
+    useage: '[用户1] <用户2> <用户3> <...>',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
@@ -716,8 +763,9 @@ ws.onmessage=(e)=>{
     for (let key in nosafetrip) {
       if (nosafetrip[key][0] == hc.trip) {
         _send({
-          cmd: 'chat',
-          text: `@${hc.nick} 嘿，你的识别码密码可能并不安全，请不要使用\`${nosafetrip[key][1]}\`继续当你的密码了，容易泄露被冒充！`
+          cmd: 'whisper',
+          nick: hc.nick,
+          text: `嘿，你的识别码密码可能并不安全，请不要使用\`${nosafetrip[key][1]}\`继续当你的密码了，容易泄露被冒充！`
         })
       }
     }
