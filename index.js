@@ -507,11 +507,11 @@ var COMMANDS = {
       args = [...new Set(args)]
       args.forEach(arg=>{
         if (arg == myNick) {
-          info.push(`踢出 ${arg} 失败：我何德何能`)
+          info.push(`踢出 ${arg} 失败：不想自裁`)
         } else if (getInfo(arg)) {
-          if (config.modtrip.includes(userinfo.trip) && !config.modtrip.includes(getInfo(arg).trip)) {
+          if (config.modtrip.includes(userinfo.trip) && !config.modtrip.includes(getInfo(arg).trip) && getInfo(arg).uType != "mod") {
             kicklist.push(arg)
-          } else if (getInfo(arg).trip == userinfo.trip) {
+          } else if (getInfo(arg).trip == userinfo.trip && getInfo(arg).uType != "mod") {
             if (getInfo(arg).trip) {
               kicklist.push(arg)
             } else if (arg == userinfo.nick) {
@@ -519,6 +519,8 @@ var COMMANDS = {
             } else {
               info.push(`踢出 ${arg} 失败：你不能证明他是你，他没有识别码`)
             }
+          } else if (getInfo(arg).uType == "mod") {
+            info.push(`踢出 ${args} 失败：我何德何能`)
           } else {
             if (config.modtrip.includes(userinfo.trip)) {
               info.push(`踢出 ${arg} 失败：你只能踢出同识别码的授权用户`)
@@ -630,7 +632,7 @@ function checkBan() {
       testRegExps(config.bans.trip,user.trip) ||
       testRegExps(config.bans.hash,user.hash)
     ) {
-      if (!config.modtrip.includes(user.trip)) kickuser.push(user.nick)
+      if (!config.modtrip.includes(user.trip) && user.uType != "mod") kickuser.push(user.nick)
     }
   })
   if (kickuser.length > 0) {
@@ -867,7 +869,7 @@ ws.onmessage=(e)=>{
       spamhash[checkinfo] += config.rl[1] + hc.text.length * config.rl[2]
       if (spamhash[checkinfo] > config.rl[0]) {
         spamhash[checkinfo] = 0
-        if (!config.modtrip.includes(hc.trip)) {
+        if (!config.modtrip.includes(hc.trip) && getInfo(hc.nick?hc.nick:hc.from).uType != "mod") {
           _send({
             cmd: 'whisper',
             nick: 'mbot',
