@@ -576,7 +576,7 @@ var COMMANDS = {
 function testRegExps(RegExps, content) {
   for (let expression of RegExps) {
     try {
-      let regex = regex = new RegExp(expression[0])
+      let regex = new RegExp(expression[0])
       if (expression[1]) regex = new RegExp(expression[0], expression[1])
       if (regex.test(content)) return true;
     } catch (e) {}
@@ -600,7 +600,7 @@ setInterval(()=>{
       cmd: 'whisper',
       nick: 'mbot',
       text: `kick ${kickuser.join(" ")}`
-    })
+    }, true)
   }
 },1000)
 
