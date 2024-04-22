@@ -583,8 +583,8 @@ function testRegExps(RegExps, content) {
   }
   return false;
 }
-//封禁用户Interval
-setInterval(()=>{
+//封禁用户检查
+function checkBan() {
   let kickuser = []
   users.forEach((user)=>{
     if (
@@ -602,7 +602,7 @@ setInterval(()=>{
       text: `kick ${kickuser.join(" ")}`
     }, true)
   }
-},1000)
+}
 
 console.log("正在连接到服务器……");
 var ws = new websocket("wss://hack.chat/chat-ws");
@@ -797,6 +797,9 @@ ws.onmessage=(e)=>{
     });
     users_.push(payload)
   }
+
+  //封禁用户支持
+  if (hc.cmd == "onlineAdd" || hc.cmd == "onlineSet") checkBan()
   //lookup数据库支持
   if (hc.cmd == "onlineAdd") {
     lookup.push({
