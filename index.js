@@ -550,8 +550,8 @@ var COMMANDS = {
         if (['nick','hash','trip'].includes(args[0])) { //我感觉我是天才
           //config.bans[args[0]] // 我感觉我是天才
           if (args[1]) {
-            if (config.bans[args[0]].some(item => item[0] === args[1] && item[1] === args[2])) {
-              config.bans[args[0]] = config.bans[args[0]].filter(item => !(item[0] === args[1] && item[1] === args[2]));
+            if (config.bans[args[0]].some(item => item[0] == args[1] && item[1] == args[2])) {
+              config.bans[args[0]] = config.bans[args[0]].filter(item => !(item[0] == args[1] && item[1] == args[2]));
               back(`删除成功`)
             } else {
               config.bans[args[0]].push([args[1],args[2]])
