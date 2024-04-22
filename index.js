@@ -496,13 +496,13 @@ var COMMANDS = {
   },
   kick: {
     run: (args,obj,userinfo,whisper,back) => {
-      if (!args.join(" ").trim()) {
-        back("请提供用户名")
-        return;
-      }
       let kicklist = []
       let info = []
       args = args.join(" ").match(/[a-zA-Z0-9_]{1,24}/g)
+      if (!args) {
+        back("你6")
+        return;
+      }
       args = args.filter(a=>{return a})
       args = [...new Set(args)]
       args.forEach(arg=>{
