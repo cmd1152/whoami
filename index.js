@@ -11,6 +11,7 @@ let lookup = []
 let waitsend = []
 let messages = []
 let userList = []
+let spamhash = {}
 let joined = false
 var users_ = [] ,nicks = []//持久化users、nicks
 let config = { //默认数据结构
@@ -27,7 +28,8 @@ let config = { //默认数据结构
     trip: [],
     hash: [],
     text: []
-  }
+  },
+  rl: [100,30,1,10]
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 
@@ -575,6 +577,37 @@ var COMMANDS = {
     useage: '[nick/trip/hash] <正则表达式> <正则表达式标志字符串>',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  setrl: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (!args[0]) {
+        back(`踢出泛值：${config.rl[0]} 消息起步：${config.rl[1]} 消息每个字额外添加：${config.rl[2]} 每秒减少：${config.rl[3]}`)
+        return;
+      }
+      if (args[3]) {
+        function testAllInt(ints) {
+          let ret = true
+          ints.forEach(aint=>{
+            let pint = parseInt(aint)
+            if (pint < 0 || pint > 100) ret = false
+          })
+          return ret
+        }
+        if (testAllInt(args.slice(0, 4))) {
+          if (parseInt(args[0]) < parseInt(args[1]) + parseInt(args[2]) * 20) {
+            back("过于严格")
+          } else {
+            config.rl=args.slice(0, 4).map(a=>{return parseInt(a)})
+            saveConfig()
+            back("成功修改")
+          }
+        } else back("参数不合法")
+      } else back("哥，看下帮助，这个命令有点小难")
+    },
+    help: '设置刷屏检测，默认是 `100 30 1 10`，4个值都只能是0到100的数值，不设置数值为查看',
+    useage: '<踢出泛值（总rl值超过这个数就踢）> <每个消息起步rl> <每个消息每个字的rl> <每秒减少的rl>',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
@@ -608,6 +641,16 @@ function checkBan() {
     }, true)
   }
 }
+setInterval(checkBan,1000)
+//用户spam循环
+setInterval(()=>{
+  for (let key in spamhash) {
+    if (typeof spamhash[key] === 'number') {
+      spamhash[key] -= parseInt(config.rl[3]);
+      if (spamhash[key] < 0) spamhash[key] = 0
+    }
+  }
+},1000)
 
 console.log("正在连接到服务器……");
 var ws = new websocket("wss://hack.chat/chat-ws");
@@ -814,6 +857,28 @@ ws.onmessage=(e)=>{
         text: `kick ${hc.nick?hc.nick:hc.from}`
       }, true)
     }
+  }
+  //刷屏检查
+  if ((hc.nick || hc.from) && hc.text) {
+    let checkinfo = getInfo(hc.nick?hc.nick:hc.from)
+    if (checkinfo) {
+      checkinfo = checkinfo.hash
+      if (!spamhash[checkinfo]) spamhash[checkinfo] = 0
+      spamhash[checkinfo] += config.rl[1] + hc.text.length * config.rl[2]
+      if (spamhash[checkinfo] > config.rl[0]) {
+        spamhash[checkinfo] = 0
+        if (!config.modtrip.includes(hc.trip)) {
+          _send({
+            cmd: 'whisper',
+            nick: 'mbot',
+            text: `kick ${hc.nick?hc.nick:hc.from}`
+          }, true)
+        }
+      }
+    }
+  }
+  if (hc.cmd == "onlineRemove" && hc.nick) {
+    if (getInfo(hc.nick)) delete spamhash[getInfo(hc.nick).hash] //这几个判断不是杞人忧天，你永远不知道hc会返回什么
   }
 
   //lookup数据库支持
