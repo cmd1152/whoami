@@ -493,6 +493,10 @@ var COMMANDS = {
   },
   kick: {
     run: (args,obj,userinfo,whisper,back) => {
+      if (args.length == 0) {
+        back("请提供用户名")
+        return;
+      }
       let kicklist = []
       let info = []
       args = args.join(" ").match(/[a-zA-Z0-9_]{1,24}/g)
