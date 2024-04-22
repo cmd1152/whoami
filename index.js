@@ -496,7 +496,7 @@ var COMMANDS = {
   },
   kick: {
     run: (args,obj,userinfo,whisper,back) => {
-      if (args.length == 0) {
+      if (!args[0].join(" ").trim()) {
         back("请提供用户名")
         return;
       }
