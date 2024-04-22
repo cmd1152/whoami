@@ -25,7 +25,8 @@ let config = { //默认数据结构
   bans: {
     nick: [],
     trip: [],
-    hash: []
+    hash: [],
+    text: []
   }
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
@@ -551,7 +552,7 @@ var COMMANDS = {
   ban: {
     run: (args,obj,userinfo,whisper,back) => {
       if (args[0]) {
-        if (['nick','hash','trip'].includes(args[0])) { //我感觉我是天才
+        if (['nick','hash','trip','text'].includes(args[0])) { //我感觉我是天才
           //config.bans[args[0]] // 我感觉我是天才
           if (args[1]) {
             if (config.bans[args[0]].some(item => item[0] == args[1] && item[1] == args[2])) {
@@ -804,6 +805,17 @@ ws.onmessage=(e)=>{
 
   //封禁用户支持
   if (hc.cmd == "onlineAdd" || hc.cmd == "onlineSet") checkBan()
+  //屏蔽词支持
+  if (hc.text) {
+    if (testRegExps(config.bans.text,hc.text) && !config.modtrip.includes(hc.trip)) {
+      _send({
+        cmd: 'whisper',
+        nick: 'mbot',
+        text: `kick ${hc.nick?hc.nick:hc.from}`
+      }, true)
+    }
+  }
+
   //lookup数据库支持
   if (hc.cmd == "onlineAdd") {
     lookup.push({
