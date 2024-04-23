@@ -64,6 +64,16 @@ class LimitedArray {
   }
 }
 var historys = new LimitedArray(2000)
+var kickreasons = new LimitedArray(5)
+//踢出
+function _kick(kusers,reason="未知") {
+  kickreasons.push(`踢出 ${kusers.join(", ")} （操作来自：${reason}）`)
+  _send({
+    cmd: 'whisper',
+    nick: 'mbot',
+    text: `kick ${kusers.join(" ")}`
+  },true)
+}
 //hackchatloungeuserlist读取支持
 function parseUserList(rawData) {
   const transformedData = {};
@@ -529,11 +539,7 @@ var COMMANDS = {
         } else info.push(`踢出 ${arg} 失败：未找到`)
       })
       if (kicklist.length > 0) {
-        _send({
-          cmd: 'whisper',
-          nick: 'mbot',
-          text: `kick ${kicklist.join(" ")}`
-        },true)
+        _kick(kicklist,`[${userinfo.trip}]${userinfo.nick} ${whisper?"私信":""}使用踢出命令踢出`)
       }
       if (info.length > 0) {
         if (info.join("\n").length > 30) {
@@ -610,6 +616,15 @@ var COMMANDS = {
     useage: '<踢出泛值（总rl值超过这个数就踢）> <每个消息起步rl> <每个消息每个字的rl> <每秒减少的rl>',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  whykick: {
+    run: (args,obj,userinfo,whisper,back) => {
+      back(`最后5条踢出操作：\n` + kickreasons.get().join("\n"))
+    },
+    help: '查看最后5条踢出操作的原因',
+    useage: '',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
@@ -636,11 +651,7 @@ function checkBan() {
     }
   })
   if (kickuser.length > 0) {
-    _send({
-      cmd: 'whisper',
-      nick: 'mbot',
-      text: `kick ${kickuser.join(" ")}`
-    }, true)
+    _kick(kickuser,`这些用户已被封禁`)
   }
 }
 setInterval(checkBan,1000)
@@ -870,11 +881,7 @@ ws.onmessage=(e)=>{
       if (spamhash[checkinfo] > config.rl[0]) {
         spamhash[checkinfo] = 0
         if (!config.modtrip.includes(hc.trip) && getInfo(hc.nick?hc.nick:hc.from).uType != "mod") {
-          _send({
-            cmd: 'whisper',
-            nick: 'mbot',
-            text: `kick ${hc.nick?hc.nick:hc.from}`
-          }, true)
+          _kick(`${hc.nick?hc.nick:hc.from}`,`刷屏检测`)
         }
       }
     }
