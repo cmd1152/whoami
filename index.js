@@ -881,7 +881,7 @@ ws.onmessage=(e)=>{
       if (spamhash[checkinfo] > config.rl[0]) {
         spamhash[checkinfo] = 0
         if (!config.modtrip.includes(hc.trip) && getInfo(hc.nick?hc.nick:hc.from).uType != "mod") {
-          _kick(`${hc.nick?hc.nick:hc.from}`,`刷屏检测`)
+          _kick([hc.nick?hc.nick:hc.from],`刷屏检测`)
         }
       }
     }
