@@ -66,12 +66,21 @@ class LimitedArray {
 var historys = new LimitedArray(2000)
 var kickreasons = new LimitedArray(5)
 //踢出
+var waitkick = []
 function _kick(kusers,reason="未知") {
-  kickreasons.push(`踢出 ${kusers.join(", ")} （操作来自：${reason}）`)
+  //首先筛选出在线而且是不在等待踢出列表的用户
+  let kusersb = kusers.filter(user=>{
+    return !waitkick.includes(user) && nicks.includes(user)
+  })
+  if (kusersb.length == 0) return;
+  //然后，把筛选后的用户推入到等待踢出列表，避免反复踢出
+  kusersb.forEach((user)=>{waitkick.push(user)})
+  //踢出用户
+  kickreasons.push(`踢出 ${kusersb.join(", ")} （操作来自：${reason}）`)
   _send({
     cmd: 'whisper',
     nick: 'mbot',
-    text: `kick ${kusers.join(" ")}`
+    text: `kick ${kusersb.join(" ")}`
   },true)
 }
 //hackchatloungeuserlist读取支持
@@ -864,11 +873,7 @@ ws.onmessage=(e)=>{
   //屏蔽词支持
   if (hc.text) {
     if (testRegExps(config.bans.text,hc.text) && !config.modtrip.includes(hc.trip)) {
-      _send({
-        cmd: 'whisper',
-        nick: 'mbot',
-        text: `kick ${hc.nick?hc.nick:hc.from}`
-      }, true)
+      _kick([`${hc.nick?hc.nick:hc.from}`])
     }
   }
   //刷屏检查
@@ -888,6 +893,15 @@ ws.onmessage=(e)=>{
   }
   if (hc.cmd == "onlineRemove" && hc.nick) {
     if (getInfo(hc.nick)) delete spamhash[getInfo(hc.nick).hash] //这几个判断不是杞人忧天，你永远不知道hc会返回什么
+  }
+  //踢出
+  if (hc.cmd == "info" && hc.text.startsWith("Kicked ")) { //从等待踢出队列删除已经踢出的用户
+    let index = waitkick.indexOf(hc.text.substring(7));
+    if (index !== -1) waitkick.splice(index, 1);
+  }
+  if (hc.cmd == "onlineRemove" && hc.nick) {
+    let index = waitkick.indexOf(hc.nick); //从等待队列删除已退出的用户，防止残留
+    if (index !== -1) waitkick.splice(index, 1);
   }
 
   //lookup数据库支持
