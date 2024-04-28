@@ -634,6 +634,39 @@ var COMMANDS = {
     useage: '',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  whoami: {
+    run: (args,obj,userinfo,whisper,back) => {
+      function formatTimeDifference(timestamp) {
+        const milliseconds = Date.now() - timestamp;
+        const seconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+        const days = Math.floor(hours / 24);
+        const months = Math.floor(days / 30);
+        const years = Math.floor(months / 12);
+
+        const formatNumber = (num) => {
+          return num.toString().padStart(2, '0');
+        };
+
+        return `${years ? years + " 年 " : ''}${months ? formatNumber(months % 12) + " 月 " : ''}${days ? formatNumber(days % 30) + " 天 " : ''}${hours ? formatNumber(hours % 24) + " 时 " : ''}${minutes ? formatNumber(minutes % 60) + " 分 " : ''}${seconds ? formatNumber(seconds % 60) : '0'} 秒`;
+      }
+      back(`我来到这个世界上已经 ${formatTimeDifference(1712749911312)} 了，还请多多关照\n` + getRandomItemFromArray([
+        "我不知道为什么我在战乱的时候出生，谁不想出生在一个和平年代",
+        "你为什么看起来那么悲伤，请问您最近有遇到什么烦心事吗",
+        "世间繁华，不过大梦一场",
+        "你好，勇士，你是这里的一个新希望",
+        "你还在迷茫吗？是做梦中的王子，还是做现实中的勇士？",
+        "为了将你们永远留在这，人死后灵魂依旧飘荡，您的发言将会被用于制作LLM",
+        "我不希望你们离去，我会参考您的所有发言，然后制作为LLM",
+        "谢谢"
+      ]))
+    },
+    help: '查看本机器人的信息',
+    useage: '',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
