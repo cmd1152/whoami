@@ -334,7 +334,7 @@ var COMMANDS = {
         messages.push({
           "l":"n",
           "t":to,
-          "n":`${formatTime()} ${obj.trip?"["+obj.trip+"]":""}${obj.nick}：\n>${text.join(" ").split("\n").join("\n>")}\n`,
+          "n":`${formatTime()} ${userinfo.trip?"["+userinfo.trip+"]":""}${userinfo.nick}：\n>${text.join(" ").split("\n").join("\n>")}\n`,
           "w":whisper
         })
         saveMsg()
@@ -360,7 +360,7 @@ var COMMANDS = {
         messages.push({
           "l":"t",
           "t":to,
-          "n":`${formatTime()} ${obj.trip?"["+obj.trip+"]":""}${obj.nick}：\n>${text.join(" ").split("\n").join("\n>")}\n`,
+          "n":`${formatTime()} ${userinfo.trip?"["+userinfo.trip+"]":""}${userinfo.nick}：\n>${text.join(" ").split("\n").join("\n>")}\n`,
           "w":whisper
         })
         saveMsg()
@@ -386,7 +386,7 @@ var COMMANDS = {
         messages.push({
           "l":"h",
           "t":to,
-          "n":`${formatTime()} ${obj.trip?"["+obj.trip+"]":""}${obj.nick}：\n>${text.join(" ").split("\n").join("\n>")}\n`,
+          "n":`${formatTime()} ${userinfo.trip?"["+userinfo.trip+"]":""}${userinfo.nick}：\n>${text.join(" ").split("\n").join("\n>")}\n`,
           "w":whisper
         })
         saveMsg()
@@ -873,7 +873,7 @@ ws.onmessage=(e)=>{
   //屏蔽词支持
   if (hc.text) {
     if (testRegExps(config.bans.text,hc.text) && !config.modtrip.includes(hc.trip)) {
-      _kick([`${hc.nick?hc.nick:hc.from}`])
+      _kick([`${hc.nick?hc.nick:hc.from}`],"屏蔽词")
     }
   }
   //刷屏检查
