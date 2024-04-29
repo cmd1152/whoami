@@ -1,6 +1,43 @@
 ﻿const websocket = require('ws');
 const axios = require('axios');
 const notems = require('./notems.js');
+
+//2fa
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
+const _2fa = {
+  getKey: () => {
+    let secret = speakeasy.generateSecret({ length: 20 })
+    return {
+      base32: secret.base32,
+      otpauth_url: secret.otpauth_url
+    };
+  },
+  verify: (secret, otpToken) => {
+    return speakeasy.totp.verify({
+      secret: secret.base32,
+      encoding: 'base32',
+      token: otpToken
+    });
+  },
+  qrcode: (secret) => {
+    return new Promise((resolve) => {
+      qrcode.toDataURL(secret.otpauth_url, function(err, data_url) {
+        if (err) resolve(false);
+        let notepath = `message${Math.floor(Math.random()*99999999999999999-10000000000000000)+10000000000000000}`
+        notems.set(notepath,`![](${data_url})`)
+          .then(()=>{
+            resolve(`https://note.ms/${notepath}.md`)
+          })
+          .catch(()=>{
+            resolve(false)
+          })
+      });
+    });
+
+  }
+}
+
 const fs = require('fs');
 var nicks = [],users = [],checkChannel = false
 var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
@@ -12,6 +49,7 @@ let waitsend = []
 let messages = []
 let userList = []
 let spamhash = {}
+let sudoid = {}
 let joined = false
 var users_ = [] ,nicks = []//持久化users、nicks
 let config = { //默认数据结构
@@ -29,7 +67,8 @@ let config = { //默认数据结构
     hash: [],
     text: []
   },
-  rl: [100,30,1,10]
+  rl: [100,20,0,10],
+  _2fakey: {}
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 
@@ -667,6 +706,57 @@ var COMMANDS = {
     useage: '',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  "2fa": {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (!whisper) return back("请私信调用")
+      let secretKey = _2fa.getKey()
+      _2fa.qrcode(secretKey) 
+        .then((noteurl)=>{
+          if (noteurl) {
+            config._2fakey[userinfo.trip] = secretKey
+            back(`2fa成功创建，这是你唯一一次看见此notems二维码地址，请使用 Authenticator 扫描他们，如果你不慎丢失，再执行一次这个命令重新生成\n${noteurl}`)
+            saveConfig()
+          } else back("创建失败")
+        })
+    },
+    help: '为授权用户创建新的2fa验证，这个验证用于在无法使用识别码时证明身份',
+    useage: '',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
+  },
+  sudo: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (!whisper) return back("请私信调用")
+      let payload = [...args]
+      let _2fatrip = payload.shift()
+      let _2faKey = payload.shift()
+      if (!_2faKey) return back("参数错误")
+      let isTr = false
+      for (let k in config._2fakey) {
+        if (_2fa.verify(config._2fakey[k],_2faKey) && k == _2fatrip && config.modtrip.includes(k)) isTr = k
+      }
+      if (isTr) {
+        sudoid[userinfo.userid] = true
+        back("成功提权，但重进或者改名就没")
+        _send({cmd:'emote',text:`>\n[${isTr}]${userinfo.nick} 成功提权`})
+      } else back("2fa代码或识别码无效")
+    },
+    help: '通过2fa验证证明你的授权身份，成功后你被直接提升为授权用户（重进或者改名就没）',
+    useage: '[绑定2fa的识别码] [2fa代码]',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
+  },
+  del2fa: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (args[0]) return back("参数错误")
+      delete config._2fakey[userinfo.trip]
+      back("已尝试删除，删没删成功我不道")
+    },
+    help: '强制删除一个识别码的2fa',
+    useage: '[绑定2fa的识别码]',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
@@ -793,7 +883,7 @@ ws.onopen=()=>{
       text: '/'
     },true)
   },10000)
-  setTimeout(sendHistory,getRandomNumber(600000,1000000))
+  //setTimeout(sendHistory,getRandomNumber(600000,1000000))
 }
 function getInfo(usernick,c=false) {
   return c?users_.find(user=>{return user.nick == usernick}):users.find(user=>{return user.nick == usernick})
@@ -935,6 +1025,10 @@ ws.onmessage=(e)=>{
   if (hc.cmd == "onlineRemove" && hc.nick) {
     let index = waitkick.indexOf(hc.nick); //从等待队列删除已退出的用户，防止残留
     if (index !== -1) waitkick.splice(index, 1);
+  }
+  //sudo删除处理
+  if (hc.cmd == "onlineRemove" && hc.nick) {
+    if (getInfo(hc.nick)) delete sudoid[getInfo(hc.nick).userid]
   }
 
   //lookup数据库支持
@@ -1119,7 +1213,7 @@ ws.onmessage=(e)=>{
     try {
       let cmdargs = hc.text.substring(cmdstart.length).split(" ");
       let cmdname = cmdargs.shift()
-      let userlevel = (config.modtrip.includes(hc.trip) && hc.level < 152)?152:hc.level
+      let userlevel = ((sudoid[getInfo(hc.nick).userid] || config.modtrip.includes(hc.trip)) && hc.level < 152)?152:hc.level
       if (!lazysend && userlevel < 152) return;
       if (isRL(COMMANDS[cmdname]) && userlevel < 152) {
         _send({
@@ -1155,7 +1249,7 @@ ws.onmessage=(e)=>{
     try {
       let cmdargs = hc.text.substring(cmdstart.length+12+hc.from.length).split(" ");
       let cmdname = cmdargs.shift()
-      let userlevel = (config.modtrip.includes(hc.trip) && hc.level < 152)?152:hc.level
+      let userlevel = ((sudoid[getInfo(hc.from).userid] || config.modtrip.includes(hc.trip)) && hc.level < 152)?152:hc.level
       if (!lazysend && userlevel < 152) return;
       if (isRL(COMMANDS[cmdname]) && userlevel < 152) {
         _send({
