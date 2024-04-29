@@ -979,6 +979,7 @@ ws.onmessage=(e)=>{
     }
   }
 
+  /* 太吵了
 
   //why did you call yourself
   if (hc.cmd == "chat" && hc.text.replace("@","").trim() == hc.nick) _send({cmd:'chat',text:'why did you call yourself'})
@@ -1003,6 +1004,8 @@ ws.onmessage=(e)=>{
     let semsg = hc.text.replace("@"+myNick,"").trim()
     qyk(semsg)
   }
+
+  */
 
   //留言处理
   if (hc.cmd == "chat") {
