@@ -956,8 +956,8 @@ ws.onmessage=(e)=>{
   if (hc.cmd == "onlineSet") {
     users = hc.users
     nicks = hc.nicks
-    users_ = hc.users
-    nicks_ = hc.nicks
+    hc.users.forEach(user=>{ users_.push(user) });
+    hc.nicks.forEach(nick=>{ nicks_.push(nick) });
   }
   if (hc.cmd == "onlineAdd") {
     let payload = {...hc}
@@ -969,6 +969,7 @@ ws.onmessage=(e)=>{
     });
     users_.push(payload)
     nicks_.push(hc.nick)
+    nicks=[...new Set(nicks)]
   }
   if (hc.cmd == "onlineRemove") {
     users = users.filter(function (item) {
@@ -976,6 +977,7 @@ ws.onmessage=(e)=>{
     });
     let index = nicks.indexOf(hc.nick);
     if (index !== -1) nicks.splice(index, 1);
+    nicks=[...new Set(nicks)]
   }
   if (hc.cmd == "updateUser") {
     let payload = {...hc}
