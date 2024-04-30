@@ -39,7 +39,7 @@ const _2fa = {
 }
 
 const fs = require('fs');
-var nicks = [],users = [],checkChannel = false
+var nicks = [],users = [],nicks_ = [],users = [],checkChannel = false
 var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
 var cmdstart = "!"
 var cansend = true
