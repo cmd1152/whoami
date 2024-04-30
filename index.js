@@ -757,6 +757,54 @@ var COMMANDS = {
     useage: '[绑定2fa的识别码]',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  lock: {
+    run: (args,obj,userinfo,whisper,back) => {
+      _send({
+        cmd: 'chat',
+        text: '.m lockroom'
+      }, true)
+    },
+    help: '锁房',
+    useage: '',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
+  },
+  unlock: {
+    run: (args,obj,userinfo,whisper,back) => {
+      _send({
+        cmd: 'chat',
+        text: '.m unlockroom'
+      }, true)
+    },
+    help: '取消锁房',
+    useage: '',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
+  },
+  encap: {
+    run: (args,obj,userinfo,whisper,back) => {
+      _send({
+        cmd: 'chat',
+        text: '.m enablecap'
+      }, true)
+    },
+    help: '开启验证码',
+    useage: '',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
+  },
+  discap: {
+    run: (args,obj,userinfo,whisper,back) => {
+      _send({
+        cmd: 'chat',
+        text: '.m disablecap'
+      }, true)
+    },
+    help: '关闭验证码',
+    useage: '',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
