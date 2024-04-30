@@ -6,11 +6,11 @@ const notems = require('./notems.js');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 const _2fa = {
-  getKey: () => {
+  getKey: (issuer, username) => {
     let secret = speakeasy.generateSecret({ length: 20 })
     return {
       base32: secret.base32,
-      otpauth_url: secret.otpauth_url
+      otpauth_url: speakeasy.otpauthURL({ secret: secret.ascii, label: username, issuer: issuer})
     };
   },
   verify: (secret, otpToken) => {
@@ -710,7 +710,7 @@ var COMMANDS = {
   "2fa": {
     run: (args,obj,userinfo,whisper,back) => {
       if (!whisper) return back("请私信调用")
-      let secretKey = _2fa.getKey()
+      let secretKey = _2fa.getKey("whoami",userinfo.trip)
       _2fa.qrcode(secretKey) 
         .then((noteurl)=>{
           if (noteurl) {
