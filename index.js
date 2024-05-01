@@ -41,7 +41,8 @@ const _2fa = {
 const fs = require('fs');
 var nicks = [],users = [],nicks_ = [],users = [],checkChannel = false
 var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
-var cmdstart = "."
+var defmyNick = "whoami"
+var cmdstart = "!"
 var cansend = true
 //lookup读写支持
 let lookup = []
@@ -805,13 +806,6 @@ var COMMANDS = {
     useage: '',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
-  },
-  m: {
-    run: (args,obj,userinfo,whisper,back) => {},
-    help: '没用的命令，是兼容mbot用的',
-    useage: '',
-    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 0
   }
 }
 
@@ -931,6 +925,12 @@ ws.onopen=()=>{
   },true)
   changecolor()
   setInterval(changecolor,30000)
+  setTimeout(()=>{
+    _send({
+      cmd: 'chat',
+      text: `/nick ${defmyNick}`
+    },true)
+  },5000)
   setInterval(()=>{
     checkChannel = true
     _send({
@@ -1265,7 +1265,7 @@ ws.onmessage=(e)=>{
   //屎山代码，用了return，必须放最后
 
   //命令系统
-  if (hc.cmd == "chat" && hc.text.startsWith("..")) return;
+  if (hc.cmd == "chat" && hc.text.startsWith("![")) return;
   if (hc.cmd == "chat" && hc.text.startsWith(cmdstart)) {
     try {
       let cmdargs = hc.text.substring(cmdstart.length).split(" ");
