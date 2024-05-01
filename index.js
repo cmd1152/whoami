@@ -925,12 +925,6 @@ ws.onopen=()=>{
   },true)
   changecolor()
   setInterval(changecolor,30000)
-  setTimeout(()=>{
-    _send({
-      cmd: 'chat',
-      text: `/nick ${defmyNick}`
-    },true)
-  },5000)
   setInterval(()=>{
     checkChannel = true
     _send({
@@ -1047,6 +1041,7 @@ ws.onmessage=(e)=>{
     });
     users_.push(payload)
   }
+
 
   //封禁用户支持
   if (hc.cmd == "onlineAdd" || hc.cmd == "onlineSet") checkBan()
