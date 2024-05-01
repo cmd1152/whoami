@@ -41,7 +41,6 @@ const _2fa = {
 const fs = require('fs');
 var nicks = [],users = [],nicks_ = [],users = [],checkChannel = false
 var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
-var defmyNick = "whoami"
 var cmdstart = "!"
 var cansend = true
 //lookup读写支持
@@ -197,34 +196,26 @@ function saveLookup() {
   try {
     const jsonData = JSON.stringify(lookup)//, null, 2);
     fs.writeFileSync('./lookup.json', jsonData, 'utf8');
-    return ture;
   } catch (err) {}
-  return false;
 }
 function saveMsg() {
   try {
     const jsonData = JSON.stringify(messages)//, null, 2);
     fs.writeFileSync('./msg.json', jsonData, 'utf8');
-    return ture;
   } catch (err) {}
-  return false;
 }
 function saveConfig() {
   try {
     const jsonData = JSON.stringify(config, null, 2);
     fs.writeFileSync('./config.json', jsonData, 'utf8');
-    return ture;
   } catch (err) {}
-  return false;
 }
 
 function saveUser() {
   try {
     const jsonData = JSON.stringify(userList, null, 2);
     fs.writeFileSync('./user.json', jsonData, 'utf8');
-    return ture;
   } catch (err) {}
-  return false;
 }
 
 try {
