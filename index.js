@@ -477,11 +477,9 @@ var COMMANDS = {
       .then((_4w4)=>{
         let _404 = _4w4.data.data
         _404 = _404[0]
+        if (!_404) return back("别要求那么严格嘛...")
         let etags = _404.tags.filter((tag)=>{return (args.join(" ").indexOf("[NSFW]")!=-1 || !(/[乳魅内尻屁胸]/.test(tag)))})
         back(`![](${_404.urls.original})\n[${_404.title}](https://www.pixiv.net/artworks/${_404.pid}) —— ${_404.author}\n标签：${etags.join(", ")}`)
-      })
-      .catch((e)=>{
-        back("QAQ")
       })
     },
     help: '随机找张瑟图，参考自awa_ya，在标签内添加`[NSFW]`启用r18，记住一定要加中括号，而且是英文的！！！',
@@ -1303,4 +1301,23 @@ ws.onmessage=(e)=>{
 }
 ws.onclose=()=>{
   process.exit(1)
+}
+
+process.on('uncaughtException', (err) => {
+  console.error(err);
+  try {
+    _send({
+      cmd: 'chat',
+      text: coreErr(err.message)
+    })
+  } catch(e){}
+});
+
+function coreErr(error) {
+  return getRandomItemFromArray([
+    "有些鸟儿是永远关不住的，因为它的每一片羽毛，都沾满了$的光辉",
+    "好，明明要因为$而亡的我，正在尝试坚强的活着",
+    "$了，你很开心吗？",
+    "$？厉害，但是你还是失败了！"
+  ]).replace(/\$1/,error)
 }
