@@ -263,44 +263,6 @@ var COMMANDS = {
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 500
   },
-  noteset: {
-    run: (args,obj,userinfo,whisper,back) => {
-      if (args[0]) {
-        let atext = args
-        let apage = atext.shift()
-        if (apage == "0") {
-          back("这个页面不允许你直接写入，请使用 sunoteset 命令")
-        } else {
-          notems.set(apage,atext.join(" "))
-            .then(()=>{back("成功")})
-            .catch((err)=>{back("失败："+err)})
-        }
-      } else {
-        back("参数无效")
-      }
-    },
-    help: '往一个notems路径写入内容',
-    useage: '[路径（不需要问号）] <内容>',
-    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 3000
-  },
-  sunoteset: {
-    run: (args,obj,userinfo,whisper,back) => {
-      if (args[0]) {
-        let atext = args
-        let apage = atext.shift()+"?"
-        notems.set(apage,atext.join(" "))
-          .then(()=>{back("成功")})
-          .catch((err)=>{back("失败："+err)})
-      } else {
-        back("参数无效")
-      }
-    },
-    help: '往一个特殊notems路径写入内容，如果你知道这个技术，请私信调用 noteset ，不要公屏使用避免传播',
-    useage: '[路径（不需要问号）] <内容>',
-    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 3000
-  },
   padd: {
     run: (args,obj,userinfo,whisper,back) => {
       if (!args[0]) {
