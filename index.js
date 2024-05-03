@@ -702,6 +702,7 @@ var COMMANDS = {
   "2fa": {
     run: (args,obj,userinfo,whisper,back) => {
       if (!whisper) return back("请私信调用")
+      if (!userinfo.trip) return back("你识别码没了？")
       let secretKey = _2fa.getKey("whoami",userinfo.trip)
       _2fa.qrcode(secretKey) 
         .then((noteurl)=>{
@@ -730,7 +731,7 @@ var COMMANDS = {
       }
       if (isTr) {
         sudoid[userinfo.userid] = true
-        back("成功提权，但重进或者改名就没")
+        back("成功提权，但重进或者改名就没，部分命令用不了，kick可以用ban再unban代替")
         _send({cmd:'emote',text:`>\n[${isTr}]${userinfo.nick} 成功提权`})
       } else back("2fa代码或识别码无效")
     },
