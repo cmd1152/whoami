@@ -797,6 +797,15 @@ var COMMANDS = {
     useage: '',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  ping: {
+    run: (args,obj,userinfo,whisper,back) => {
+      back(`延迟：${new Date().getTime() - obj.time}ms`)
+    },
+    help: '显示bot到服务器的延迟',
+    useage: '',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
   }
 }
 
