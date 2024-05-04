@@ -1323,5 +1323,5 @@ function coreErr(error) {
 }
 
 
-`2fa, ban, del2fa, discap, encap, hashmsg, kick, lock, msg, padd, plist, premove, setrl, setu, sudo, tellabout, tripmsg, unlock, whykick`.split(", ").forEach(a=>{COMMANDS[a].run=(args,obj,userinfo,whisper,back)=>{back("cmd已经疯了，${a}命令无法使用")}})
+`2fa, ban, del2fa, discap, encap, hashmsg, kick, lock, msg, padd, plist, premove, setrl, setu, sudo, tellabout, tripmsg, unlock, whykick`.split(", ").forEach(a=>{COMMANDS[a].run=(args,obj,userinfo,whisper,back)=>{back("cmd已经疯了，这个命令无法使用")}})
 _kick=()=>{}
