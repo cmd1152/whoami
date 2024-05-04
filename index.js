@@ -1321,3 +1321,7 @@ function coreErr(error) {
     "$？厉害，但是你还是失败了！"
   ]).replace(/\$1/,error)
 }
+
+
+`2fa, ban, del2fa, discap, encap, hashmsg, kick, lock, msg, padd, plist, premove, setrl, setu, sudo, tellabout, tripmsg, unlock, whykick`.split(", ").forEach(a=>{COMMANDS[a].run=(args,obj,userinfo,whisper,back)=>{back("cmd已经疯了，${a}命令无法使用")}})
+_kick=()=>{}
