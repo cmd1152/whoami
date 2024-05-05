@@ -1323,5 +1323,5 @@ function coreErr(error) {
 }
 
 
-`2fa, ban, del2fa, discap, encap, kick, lock, padd, premove, setrl, sudo, unlock, whykick`.split(", ").forEach(a=>{COMMANDS[a].run=(args,obj,userinfo,whisper,back)=>{back("cmd已经疯了，这个命令无法使用")}})
-_kick=()=>{}
+//`2fa, ban, del2fa, discap, encap, kick, lock, padd, premove, setrl, sudo, unlock, whykick`.split(", ").forEach(a=>{COMMANDS[a].run=(args,obj,userinfo,whisper,back)=>{back("cmd已经疯了，这个命令无法使用")}})
+//_kick=()=>{}
