@@ -1299,7 +1299,7 @@ ws.onmessage=(e)=>{
   }
 
 }
-ws.onclose=()=>{
+ws.onclose=ws.onerror=()=>{
   process.exit(1)
 }
 
