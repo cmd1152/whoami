@@ -767,6 +767,17 @@ var COMMANDS = {
     useage: '',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
+  },
+  stats: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (whisper) return back('不兼容私信')
+      back('请稍后')
+      _send({cmd:'chat',text:'/stats'})
+    },
+    help: '显示HC的详细信息（比直接用 /stats 更详细）',
+    useage: '',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 10000
   }
 }
 
@@ -1217,7 +1228,26 @@ ws.onmessage=(e)=>{
   if (hc.cmd == "chat") lastsay[hc.nick] = hc.text
   if (hc.cmd == "info" && hc.type == "emote") lastsay[hc.nick] = hc.text 
 
-
+  //stats处理
+  if (hc.cmd == "info") {
+    let statsinfo = /current-connections: (\d+)\ncurrent-channels: (\d+)\nusers-joined: (\d+)\ninvites-sent: (\d+)\nmessages-sent: (\d+)\nusers-banned: (\d+)\nusers-kicked: (\d+)\nstats-requested: (\d+)\nserver-uptime: (\d+d \d+h \d+m \d+s)/
+    if (statsinfo.test(hc.text)) {
+      let hcstats = hc.text.match(statsinfo);
+      function parseUptimeString(uptimeString) {
+        var regex = /(\d+)d (\d+)h (\d+)m (\d+)s/;
+        var matches = uptimeString.match(regex);
+        var days = parseInt(matches[1]) * 24 * 60 *60 * 1000; // 将天数转换为毫秒
+        var hours = parseInt(matches[2]) * 60 * 60 * 1000; // 将小时转换为毫秒
+        var minutes = parseInt(matches[3]) * 60 * 1000; // 将分钟转换为毫秒
+        var seconds = parseInt(matches[4]) * 1000; // 将秒数转换为毫秒
+        return days + hours + minutes + seconds;
+      }
+      _send({
+        cmd:'chat',
+        text:`现在有${hcstats[1]}个用户连接到了${hcstats[2]}个频道\n已经有${hcstats[3]}次加入，发送了${hcstats[5]}条消息和${hcstats[4]}次邀请，有${hcstats[7]}个用户被踢，${hcstats[6]}个用户被ban\n服务器启动于 ${new Date(Date.now() - parseUptimeString(hcstats[9]))} （距今${hcstats[9]}）`
+      })
+    }
+  }
   //屎山代码，用了return，必须放最后
 
   //命令系统
