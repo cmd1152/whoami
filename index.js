@@ -565,14 +565,16 @@ var COMMANDS = {
         if (['nick','hash','trip','text'].includes(args[0])) { //我感觉我是天才
           //config.bans[args[0]] // 我感觉我是天才
           if (args[1]) {
-            if (config.bans[args[0]].some(item => item[0] == args[1] && item[1] == args[2])) {
-              config.bans[args[0]] = config.bans[args[0]].filter(item => !(item[0] == args[1] && item[1] == args[2]));
-              back(`删除成功`)
-            } else {
-              config.bans[args[0]].push([args[1],args[2]])
-              back(`添加成功`)
-            }
-            saveConfig()
+            if (/^[igmusdy]*$/.test(args[1])) {
+              if (config.bans[args[0]].some(item => item[0] == args[1] && item[1] == args[2])) {
+                config.bans[args[0]] = config.bans[args[0]].filter(item => !(item[0] == args[1] && item[1] == args[2]));
+                back(`删除成功`)
+              } else {
+                config.bans[args[0]].push([args[1],args[2]])
+                back(`添加成功`)
+              }
+              saveConfig()
+            } else back("无效正则表达式标志字符串")
           } else {
             if (config.bans[args[0]].length > 0) {
               back(`${args[0]} 封禁正则表达式列表：\`${config.bans[args[0]].join("`, `")}\``)
