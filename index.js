@@ -565,7 +565,8 @@ var COMMANDS = {
         if (['nick','hash','trip','text'].includes(args[0])) { //我感觉我是天才
           //config.bans[args[0]] // 我感觉我是天才
           if (args[1]) {
-            if (/^[igmusdy]*$/.test(args[1])) {
+            let igm = args[2]?/^[igmusdy]*$/.test(args[2]):true;
+            if (igm) {
               if (config.bans[args[0]].some(item => item[0] == args[1] && item[1] == args[2])) {
                 config.bans[args[0]] = config.bans[args[0]].filter(item => !(item[0] == args[1] && item[1] == args[2]));
                 back(`删除成功`)
