@@ -142,7 +142,7 @@ function parseUserList(rawData) {
         const trips = value.split(/[.,，。、;；…\s]/).filter(sbcnm=>{return sbcnm})
         userInfo.trip = trips;
       } else if (key === "年龄") {
-        userInfo.age = parseInt(value);
+        userInfo.age = value;
       } else if (key === "性别") {
         userInfo.gender = value;
       } else if (key === "描述") {
