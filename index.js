@@ -119,33 +119,39 @@ function ChatGPT(message,hc) {
     })
     messages.push({
       role: "system",
-      content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史`
+      content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符`
     })
     let customId = Math.floor(Math.random()*100000).toString()
     _send({
       cmd: 'chat',
-      text: inittext,
+      text: inittext + "请稍后，我正在思考你的问题...",
       customId: customId
     })
     GPT(gpturl,messages,  
     (text)=>{
       gptuserid[userid].push({
         role: 'assistant',
-        content: text
+        content: text.replace("You.com","ChatGPT")
       });
       _send({
         cmd: 'updateMessage',  
-        mode: 'append',
+        mode: 'overwrite',
         customId: customId,
-        text: text
+        text: inittext + text.replace("You.com","ChatGPT")
       });
     },
     (err)=>{
       _send({
         cmd: 'updateMessage',  
-        mode: 'append',
+        mode: 'overwrite',
         customId: customId,
-        text: "[出错了，请再试一次]"
+        text: inittext + "==[出错了，请再试一次]=="
+      });
+      _send({
+        cmd: 'updateMessage',  
+        mode: 'overwrite',
+        customId: customId,
+        text: inittext + "[出错了，请再试一次]"
       });
     })
   })
@@ -871,7 +877,7 @@ var COMMANDS = {
   },
   ping: {
     run: (args,obj,userinfo,whisper,back) => {
-      back(`延迟：${new Date().getTime() - obj.time}ms`)
+      back(`延迟：${Math.floor(new Date().getTime() - obj.time)}ms`)
     },
     help: '显示bot到服务器的延迟',
     useage: '',
