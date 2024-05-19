@@ -49,6 +49,7 @@ let waitsend = []
 let messages = []
 let userList = []
 let spamhash = {}
+let gptuserid = {}
 let sudoid = {}
 let joined = false
 var users_ = [] ,nicks = []//持久化users、nicks
@@ -68,10 +69,117 @@ let config = { //默认数据结构
     text: []
   },
   rl: [100,20,0,10],
-  _2fakey: {}
+  _2fakey: {},
+  gpt: []
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
-
+function ChatGPT(message,hc) {
+  let gpturl = getRandomItemFromArray(config.gpt);
+  let userid = getInfo(hc.nick).userid;
+  let messages = []
+  let inittext = ""
+  if (!gptuserid[userid]) {
+    inittext += "*这是新的上下文，此上下文3分钟后销毁*\n"
+    setTimeout(()=>{
+      delete gptuserid[userid];
+    },3*1000*60)
+    gptuserid[userid] = [];
+  }
+  inittext += '@' + hc.nick + " "
+  gptuserid[userid].push({
+    role: 'user',
+    content: message
+  })
+  gptuserid[userid].forEach(msg=>{
+    messages.push(msg);
+  })
+  messages.push({
+    role: "system", 
+    content: `你叫whoami，是一个MelonCmd制作的AI，要查看你的帮助，用户可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，在线用户（按逗号分隔）：${nicks.join(", ")}`
+  })
+  let busers = [...users];
+  busers=busers.map(u=>{
+    return {
+      nick:u.nick,
+      trip:u.trip,
+      hash:u.hash,
+      color:u.color,
+      level:u.level,
+      uType:u.uType
+    }
+  })
+  messages.push({
+    role: "system",
+    content: `在线列表（nick为用户名，trip为识别码，hash为哈希，color为颜色，level为等级，uType为用户类型，其他的都不重要）：\n${busers.map(a=>{return JSON.stringify(a)}).join("\n")}`
+  })
+  COMMANDS.info.run([],false,getInfo(hc.nick),false,(ia)=>{
+    messages.push({
+      role: "system",
+      content: `你可以称这个向你提问的用户为${hc.nick}，下面是向你提问的用户的信息：\n${ia}`
+    })
+    messages.push({
+      role: "system",
+      content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史`
+    })
+    let customId = Math.floor(Math.random()*100000).toString()
+    _send({
+      cmd: 'chat',
+      text: inittext,
+      customId: customId
+    })
+    GPT(gpturl,messages,  
+    (text)=>{
+      gptuserid[userid].push({
+        role: 'assistant',
+        content: text
+      });
+      _send({
+        cmd: 'updateMessage',  
+        mode: 'append',
+        customId: customId,
+        text: text
+      });
+    },
+    (err)=>{
+      _send({
+        cmd: 'updateMessage',  
+        mode: 'append',
+        customId: customId,
+        text: "[出错了，请再试一次]"
+      });
+    })
+  })
+}
+function GPT(gpturl,messages,doneback,errback) {
+  fetch(gpturl[1]+"v1/chat/completions", {
+    "headers": {
+      "accept": "application/json, text/event-stream",
+      "accept-language": "zh-CN,zh;q=0.9",
+      "authorization": "Bearer " + gpturl[0],
+      "content-type": "application/json",
+      "model": "gpt-4-turbo",
+    },
+    "body": JSON.stringify({
+      messages: messages,
+      stream: false,
+      model: 'gpt-4',
+      temperature:0.5,
+      presence_penalty:0,
+      frequency_penalty:0,
+      top_p:1
+    }),
+    "method": "POST",
+  })
+  .then(response => {
+    return response.json();
+  })
+  .then(json => {
+    doneback(json.choices[0].message.content);
+  })
+  .catch(error => {
+    errback(error.message);
+  });
+}
 let lastsay = {}
 function getRandomItemFromArray(arr) {
   var randomIndex = Math.floor(Math.random() * arr.length);
@@ -396,8 +504,7 @@ var COMMANDS = {
   info: {
     run: (args,obj,userinfo,whisper,back) => {
       if (!args[0]) {
-        back("参数无效")
-        return;
+        args[0] = userinfo.nick;
       }
       if (nicks_.includes(args[0].replace("@",""))) {
         let userinf_ = getInfo(args[0].replace("@",""),true)
@@ -412,7 +519,7 @@ var COMMANDS = {
       } else back(`我没有记录到这个用户`)
     },
     help: '显示一个用户的信息',
-    useage: '[用户名称]',
+    useage: '<用户名称>',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 500
   },
@@ -1127,7 +1234,11 @@ ws.onmessage=(e)=>{
   }
 
   */
-
+  //ChatGPT
+  if (hc.cmd == "chat" && hc.text.indexOf("@"+myNick) != -1 && hc.nick != myNick) {
+    let semsg = hc.text.replace("@"+myNick,"").trim()
+    ChatGPT(semsg,hc)
+  }
   //留言处理
   if (hc.cmd == "chat") {
     let messages2 = []
@@ -1352,7 +1463,7 @@ function coreErr(error) {
     "好，明明要因为$而亡的我，正在尝试坚强的活着",
     "$了，你很开心吗？",
     "$？厉害，但是你还是失败了！"
-  ]).replace(/\$1/,error)
+  ]).replace(/\$/,error)
 }
 
 
