@@ -877,7 +877,7 @@ var COMMANDS = {
   },
   ping: {
     run: (args,obj,userinfo,whisper,back) => {
-      back(`延迟：${Math.floor(new Date().getTime() - obj.time)}ms`)
+      back(`延迟：${(new Date().getTime() - obj.time).toString().replace("-","")}ms`)
     },
     help: '显示bot到服务器的延迟',
     useage: '',
