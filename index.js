@@ -128,7 +128,7 @@ function ChatGPT(message,hc) {
       customId: customId
     })
     GPT(gpturl,messages,  
-    (text)=>{
+    (text, data)=>{
       gptuserid[userid].push({
         role: 'assistant',
         content: text.replace("You.com","ChatGPT")
@@ -137,21 +137,21 @@ function ChatGPT(message,hc) {
         cmd: 'updateMessage',  
         mode: 'overwrite',
         customId: customId,
-        text: inittext + text.replace("You.com","ChatGPT")
+        text: `***${data.model}*** ${inittext}${text.replace(/You.com/g,"ChatGPT")}`
       });
     },
-    (err)=>{
+    (err,json)=>{
       _send({
         cmd: 'updateMessage',  
         mode: 'overwrite',
         customId: customId,
-        text: inittext + "==[出错了，请再试一次]=="
+        text: inittext + "==[出错了，请再试一次]==\n" + err
       });
       _send({
         cmd: 'updateMessage',  
         mode: 'overwrite',
         customId: customId,
-        text: inittext + "[出错了，请再试一次]"
+        text: inittext + "[出错了，请再试一次]\n```\n" + JSON.stringify(json)
       });
     })
   })
@@ -180,10 +180,14 @@ function GPT(gpturl,messages,doneback,errback) {
     return response.json();
   })
   .then(json => {
-    doneback(json.choices[0].message.content);
+    try {
+      doneback(json.choices[0].message.content, json);
+    } catch (err) {
+      errback(err.message,json);
+    }
   })
   .catch(error => {
-    errback(error.message);
+    errback(error.message,false);
   });
 }
 let lastsay = {}
@@ -1241,12 +1245,12 @@ ws.onmessage=(e)=>{
 
   */
   //ChatGPT
-  if (hc.cmd == "chat" && hc.text.indexOf("@"+myNick) != -1 && hc.nick != myNick) {
+  if (hc.cmd == "chat" && hc.text.indexOf("@"+myNick) != -1 && hc.nick != myNick && lazysend) {
     let semsg = hc.text.replace("@"+myNick,"").trim()
     ChatGPT(semsg,hc)
   }
   //留言处理
-  if (hc.cmd == "chat") {
+  if (hc.cmd == "chat" && lazysend) {
     let messages2 = []
     let sendmessage = []
     messages.forEach(message=>{
