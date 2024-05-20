@@ -180,7 +180,7 @@ function ChatGPT(message,hc) {
       cmd: 'updateMessage',  
       mode: 'overwrite',
       customId: customId,
-      text: "[出错了，请等一会再试一次]\n```\n" + JSON.stringify(json)
+      text: inittext + "[出错了，请等一会再试一次]\n```\n" + JSON.stringify(json)
     });
   })
 }
