@@ -37,7 +37,33 @@ const _2fa = {
 
   }
 }
-
+function reply(args) {//来源于crosst.chat，有改动
+  let replyText = '';
+  let originalText = args.text;
+  let overlongText = false;
+  if (originalText.length > 152) {
+    replyText = originalText.slice(0, 152);
+    overlongText = true;
+  }
+  if (args.trip) {
+    replyText = '>' + args.trip + ' ' + args.nick + '：\n';
+  } else {
+    replyText = '>' + args.nick + '：\n';
+  }
+  originalText = originalText.split('\n');
+  if (originalText.length >= 8) {
+    originalText = originalText.slice(0, 8);
+    overlongText = true;
+  }
+  for (let replyLine of originalText) {
+    if (!replyLine.startsWith('>>')) replyText += '>' + replyLine + '\n';
+  }
+  if (overlongText) replyText += '>……\n';
+  replyText += '\n';
+  var nick = args.nick
+  replyText += '@' + nick + ' ';
+  return replyText;
+}
 const fs = require('fs');
 var nicks = [],users = [],nicks_ = [],users = [],checkChannel = false
 var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
@@ -77,15 +103,15 @@ function ChatGPT(message,hc) {
   let gpturl = getRandomItemFromArray(config.gpt);
   let userid = getInfo(hc.nick).userid;
   let messages = []
-  let inittext = ""
+  let inittext = "**@" + hc.nick + "** "
   if (!gptuserid[userid]) {
-    inittext += "*这是新的上下文，此上下文3分钟后销毁*\n"
+    inittext += "*这是新的上下文，此上下文3分钟后销毁* "
     setTimeout(()=>{
       delete gptuserid[userid];
     },3*1000*60)
     gptuserid[userid] = [];
   }
-  inittext += '@' + hc.nick + " "
+  inittext += "\n";
   gptuserid[userid].push({
     role: 'user',
     content: message
@@ -110,50 +136,52 @@ function ChatGPT(message,hc) {
   })
   messages.push({
     role: "system",
-    content: `在线列表（nick为用户名，trip为识别码，hash为哈希，color为颜色，level为等级，uType为用户类型，其他的都不重要）：\n${busers.map(a=>{return JSON.stringify(a)}).join("\n")}`
+    content: `在线列表（nick为用户名，trip为识别码，hash为哈希，color为颜色，level为等级，uType为用户类型，其他的都不重要，这些信息都是公开的）：\n${busers.map(a=>{return JSON.stringify(a)}).join("\n")}`
   })
-  COMMANDS.info.run([],false,getInfo(hc.nick),false,(ia)=>{
-    messages.push({
-      role: "system",
-      content: `你可以称这个向你提问的用户为${hc.nick}，下面是向你提问的用户的信息：\n${ia}`
-    })
-    messages.push({
-      role: "system",
-      content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符`
-    })
-    let customId = Math.floor(Math.random()*100000).toString()
+  messages.push({
+    role: "system",
+    content: `你可以称这个向你提问的用户为${hc.nick}`
+  })
+  messages.push({
+    role: "system",
+    content: `最近的20条历史记录：\n${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}`
+  })
+  messages.push({
+    role: "system",
+    content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符`
+  })
+  let customId = Math.floor(Math.random()*100000).toString()
+  _send({
+    cmd: 'chat',
+    text: `***期待模型：${gpturl[2]}*** ${inittext}请稍后，我正在思考你的问题...`,
+    customId: customId
+  })
+  GPT(gpturl,messages,  
+  (text, data)=>{
+    gptuserid[userid].push({
+      role: 'assistant',
+      content: text.replace("You.com","ChatGPT")
+    });
     _send({
-      cmd: 'chat',
-      text: inittext + "请稍后，我正在思考你的问题...",
-      customId: customId
-    })
-    GPT(gpturl,messages,  
-    (text, data)=>{
-      gptuserid[userid].push({
-        role: 'assistant',
-        content: text.replace("You.com","ChatGPT")
-      });
-      _send({
-        cmd: 'updateMessage',  
-        mode: 'overwrite',
-        customId: customId,
-        text: `***${data.model}*** ${inittext}${text.replace(/You.com/g,"ChatGPT")}`
-      });
-    },
-    (err,json)=>{
-      _send({
-        cmd: 'updateMessage',  
-        mode: 'overwrite',
-        customId: customId,
-        text: inittext + "==[出错了，请再试一次]==\n" + err
-      });
-      _send({
-        cmd: 'updateMessage',  
-        mode: 'overwrite',
-        customId: customId,
-        text: inittext + "[出错了，请再试一次]\n```\n" + JSON.stringify(json)
-      });
-    })
+      cmd: 'updateMessage',  
+      mode: 'overwrite',
+      customId: customId,
+      text: `***实际模型：${data.model}*** ${inittext}${text.replace(/You.com/g,"ChatGPT")}`
+    });
+  },
+  (err,json)=>{
+    _send({
+      cmd: 'updateMessage',  
+      mode: 'overwrite',
+      customId: customId,
+      text: inittext + "==[出错了，请等一会再试一次]=="
+    });
+    _send({
+      cmd: 'updateMessage',  
+      mode: 'overwrite',
+      customId: customId,
+      text: "[出错了，请等一会再试一次]\n```\n" + JSON.stringify(json)
+    });
   })
 }
 function GPT(gpturl,messages,doneback,errback) {
@@ -168,7 +196,7 @@ function GPT(gpturl,messages,doneback,errback) {
     "body": JSON.stringify({
       messages: messages,
       stream: false,
-      model: 'gpt-4',
+      model: gpturl[2],
       temperature:0.5,
       presence_penalty:0,
       frequency_penalty:0,
@@ -221,6 +249,7 @@ class LimitedArray {
   }
 }
 var historys = new LimitedArray(2000)
+var gpthis = new LimitedArray(20)
 var kickreasons = new LimitedArray(5)
 //踢出
 var waitkick = []
@@ -1173,6 +1202,10 @@ ws.onmessage=(e)=>{
   //sudo删除处理
   if (hc.cmd == "onlineRemove" && hc.nick) {
     if (getInfo(hc.nick)) delete sudoid[getInfo(hc.nick).userid]
+  }
+  //gpt历史记录
+  if (hc.cmd == "chat" || hc.cmd == "emote" || hc.cmd == "updateMessage") {
+    gpthis.push(hc);
   }
 
   //lookup数据库支持
