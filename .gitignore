@@ -5,3 +5,5 @@ node_modules/
 msg.json
 user.json
 notems.js
+mods/
+proxys.txt

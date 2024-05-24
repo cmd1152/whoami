@@ -1,6 +1,9 @@
 ﻿const websocket = require('ws');
 const axios = require('axios');
 const notems = require('./notems.js');
+const fs = require('fs');
+const path = require('path');
+
 
 //2fa
 const speakeasy = require('speakeasy');
@@ -64,7 +67,6 @@ function reply(args) {//来源于crosst.chat，有改动
   replyText += '@' + nick + ' ';
   return replyText;
 }
-const fs = require('fs');
 var nicks = [],users = [],nicks_ = [],users = [],checkChannel = false
 var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
 var cmdstart = "!"
@@ -967,6 +969,18 @@ setInterval(()=>{
   }
 },1000)
 
+// 检测 mods 文件夹是否存在
+if (fs.existsSync('mods')) {
+  // 读取 mods 文件夹中的所有 .js 文件
+  const files = fs.readdirSync('mods').filter(file => path.extname(file) === '.js');
+
+  // 遍历每个文件并执行
+  files.forEach(file => {
+    const filePath = path.join('mods', file);
+    const fileContent = fs.readFileSync(filePath, 'utf8');
+    eval(fileContent); // 执行文件内容
+  });
+}
 console.log("正在连接到服务器……");
 var ws = new websocket("wss://hack.chat/chat-ws");
 var _send = (obj,fast=false) => {
