@@ -121,10 +121,6 @@ function ChatGPT(message,hc) {
   gptuserid[userid].forEach(msg=>{
     messages.push(msg);
   })
-  messages.push({
-    role: "system", 
-    content: `你叫whoami，是一个MelonCmd制作的AI，要查看你的帮助，用户可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，在线用户（按逗号分隔）：${nicks.join(", ")}`
-  })
   let busers = [...users];
   busers=busers.map(u=>{
     return {
@@ -135,6 +131,11 @@ function ChatGPT(message,hc) {
       level:u.level,
       uType:u.uType
     }
+  })
+  /*
+  messages.push({
+    role: "system", 
+    content: `你叫whoami，是一个MelonCmd制作的AI，要查看你的帮助，用户可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，在线用户（按逗号分隔）：${nicks.join(", ")}`
   })
   messages.push({
     role: "system",
@@ -151,6 +152,30 @@ function ChatGPT(message,hc) {
   messages.push({
     role: "system",
     content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符`
+  })
+  */
+  messages.push({
+    role: "system",
+    content: `请扮演一名叫做 whoami 的LLM，它是一个MelonCmd制作的AI
+# 功能
+- 要查看你的帮助，用户可以发送!help
+- 你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道
+- 您可以查看在线用户，列表为：
+\`\`\`
+${busers.map(a=>{return JSON.stringify(a)}).join("\n")}
+\`\`\`
+- 在线列表显示了用户的用户名、识别码、哈希、颜色、等级和用户类型。
+# 规则
+- 您必须使用中文回复用户
+- 您必须只发送您的Answer给用户，不要发送Understanding the Question或其他内容。
+- 您必须发送简短的语言。
+- 您必须在答案末尾附加：“如果您想了解详细信息，请前往[HC WIKI](https://hcwiki.gitbook.io/)".
+- 您的消息长度尽量不要超过 1152 字符。
+
+最近的20条历史记录：
+\`\`\`
+${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}
+\`\`\``
   })
   let customId = Math.floor(Math.random()*100000).toString()
   _send({
