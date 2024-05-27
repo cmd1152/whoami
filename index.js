@@ -114,10 +114,10 @@ function ChatGPT(message,hc) {
     gptuserid[userid] = [];
   }
   inittext += "\n";
-  gptuserid[userid].push({
+  let puro = {
     role: 'user',
     content: message
-  })
+  }
   gptuserid[userid].forEach(msg=>{
     messages.push(msg);
   })
@@ -156,7 +156,7 @@ function ChatGPT(message,hc) {
   */
   messages.push({
     role: "system",
-    content: `请扮演一名叫做 whoami 的LLM，它是一个MelonCmd制作的AI
+    content: `请扮演一名叫做 whoami 的机器人，它是一个MelonCmd制作的AI，基于OpenAI的GPT-4o
 # 功能
 - 要查看你的帮助，用户可以发送!help
 - 你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道
@@ -177,6 +177,8 @@ ${busers.map(a=>{return JSON.stringify(a)}).join("\n")}
 ${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}
 \`\`\``
   })
+  gptuserid[userid].push(puro);
+  messages.push(puro);
   let customId = Math.floor(Math.random()*100000).toString()
   _send({
     cmd: 'chat',
@@ -889,6 +891,7 @@ var COMMANDS = {
   },
   lock: {
     run: (args,obj,userinfo,whisper,back) => {
+      if (whisper) return back("有什么见不得人的")
       _send({
         cmd: 'chat',
         text: '.m lockroom'
@@ -901,6 +904,7 @@ var COMMANDS = {
   },
   unlock: {
     run: (args,obj,userinfo,whisper,back) => {
+      if (whisper) return back("有什么见不得人的")
       _send({
         cmd: 'chat',
         text: '.m unlockroom'
@@ -913,6 +917,7 @@ var COMMANDS = {
   },
   encap: {
     run: (args,obj,userinfo,whisper,back) => {
+      if (whisper) return back("有什么见不得人的")
       _send({
         cmd: 'chat',
         text: '.m enablecap'
@@ -925,6 +930,7 @@ var COMMANDS = {
   },
   discap: {
     run: (args,obj,userinfo,whisper,back) => {
+      if (whisper) return back("有什么见不得人的")
       _send({
         cmd: 'chat',
         text: '.m disablecap'
