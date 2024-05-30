@@ -238,6 +238,7 @@ function GPT(gpturl,messages,doneback,errback) {
   })
   .then(json => {
     try {
+      let backttt = json.choices[0].message?json.choices[0].message.content:json.choices[0].delta.content;
       doneback(json.choices[0].message.content, json);
     } catch (err) {
       errback(err.message,json);
