@@ -235,7 +235,11 @@ function GPT(gpturl,messages,doneback,errback) {
   })
   .then(json => {
     try {
-      let backttt = json.choices[0].message?json.choices[0].message.content:json.choices[0].delta.content;
+      let backttt = json.choices[0];
+      if (backttt.message) backttt = backttt.message.content; //gpt3.5
+      if (backttt.delta) backttt = backttt.delta.content; //gpt4
+      if (backttt.text) backttt = backttt.text; //glm
+      
       doneback(backttt, json);
     } catch (err) {
       errback(err.message,json);
