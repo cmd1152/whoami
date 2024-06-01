@@ -103,6 +103,13 @@ let config = { //默认数据结构
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 function ChatGPT(message,hc) {
   let gpturl = getRandomItemFromArray(config.gpt);
+  if (!gpturl) {
+    _send({
+      cmd: 'chat',
+      text: `¯\\\\\\_(ツ)\\_/¯ 我没api了`,
+    });
+    return;
+  }
   let userid = getInfo(hc.nick).userid;
   let messages = []
   let inittext = "**@" + hc.nick + "** "
@@ -156,22 +163,12 @@ function ChatGPT(message,hc) {
   */
   messages.push({
     role: "system",
-    content: `请扮演一名叫做 whoami 的机器人，它是一个MelonCmd制作的AI，基于OpenAI的GPT-4o
-# 功能
-- 要查看你的帮助，用户可以发送!help
-- 你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道
-- 您可以查看在线用户，列表为：
+    content: `你叫whoami，是一个MelonCmd制作的AI，要查看你的帮助，用户可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道
+在线列表（nick为用户名，trip为识别码，hash为哈希，color为颜色，level为等级，uType为用户类型，其他的都不重要，这些信息都是公开的）：
 \`\`\`
 ${busers.map(a=>{return JSON.stringify(a)}).join("\n")}
 \`\`\`
-- 在线列表显示了用户的用户名、识别码、哈希、颜色、等级和用户类型。
-# 规则
-- 您必须使用中文回复用户
-- 您必须只发送您的Answer给用户，不要发送Understanding the Question或其他内容。
-- 您必须发送简短的语言。
-- 您必须在答案末尾附加：“如果您想了解详细信息，请前往[HC WIKI](https://hcwiki.gitbook.io/)".
-- 您的消息长度尽量不要超过 1152 字符。
-
+请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符
 最近的20条历史记录：
 \`\`\`
 ${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}
@@ -220,7 +217,7 @@ function GPT(gpturl,messages,doneback,errback) {
       "accept-language": "zh-CN,zh;q=0.9",
       "authorization": "Bearer " + gpturl[0],
       "content-type": "application/json",
-      "model": "gpt-4-turbo",
+      "model": gpturl[2]
     },
     "body": JSON.stringify({
       messages: messages,
