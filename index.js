@@ -738,6 +738,9 @@ var COMMANDS = {
   },
   ban: {
     run: (args,obj,userinfo,whisper,back) => {
+      args = args.map((arg)=>{
+        return arg==""?null:arg;
+      })
       if (args[0]) {
         if (['nick','hash','trip','text'].includes(args[0])) { //我感觉我是天才
           //config.bans[args[0]] // 我感觉我是天才
@@ -748,21 +751,30 @@ var COMMANDS = {
                 config.bans[args[0]] = config.bans[args[0]].filter(item => !(item[0] == args[1] && item[1] == args[2]));
                 back(`删除成功`)
               } else {
-                config.bans[args[0]].push([args[1],args[2]])
-                back(`添加成功`)
+                let removetime = Infinity;
+                if (parseInt(args[3])) {
+                  removetime = parseInt(args[3]) * 1000 + new Date().getTime();
+                }
+                if (parseInt(args[3]) < 1 || parseInt(args[3]) > 1000*60*60*24*365*10) {
+                  removetime = Infinity;
+                }
+                config.bans[args[0]].push([args[1],args[2],removetime])
+                back(`添加成功，此条目${removetime == Infinity?"不会自动删除":`会在${new Date(removetime)}自动删除`}`)
               }
               saveConfig()
             } else back("无效正则表达式标志字符串")
           } else {
             if (config.bans[args[0]].length > 0) {
-              back(`${args[0]} 封禁正则表达式列表：\`${config.bans[args[0]].join("`, `")}\``)
+              back(`${args[0]} 封禁正则表达式列表：\`${
+                config.bans[args[0]].map(t=>{return t.join("|")}).join("`, `")
+              }\`\n要删除一个条目，请使用\`${cmdstart}ban ${args[0]} [上面的内容把“|”替换为空格]\``)
             } else back(`${args[0]} 封禁正则表达式列表还是空的`)
           }
         } else back("哥，不是这样子用")
       } else back("哥，看下帮助，这个命令有点小难")
     },
-    help: '按正则表达式封禁一个名称、识别码、用户名称，不加正则表达式为列出，再添加一次已经添加的正则表达式为删除',
-    useage: '[nick/trip/hash/text] <正则表达式> <正则表达式标志字符串>',
+    help: '按正则表达式封禁一个名称、识别码、用户名称，不加正则表达式为列出，再添加一次已经添加的正则表达式为删除，可以指定时间自动删除，时间超过10年为永久',
+    useage: '[nick/trip/hash/text] <正则表达式> <正则表达式标志字符串> <时间（秒）>',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
   },
@@ -1595,6 +1607,22 @@ function coreErr(error) {
 //`2fa, ban, del2fa, discap, encap, kick, lock, padd, premove, setrl, sudo, unlock, whykick`.split(", ").forEach(a=>{COMMANDS[a].run=(args,obj,userinfo,whisper,back)=>{back("cmd已经疯了，这个命令无法使用")}})
 //_kick=()=>{}
 
+//自动删除ban
+setInterval(()=>{
+  for (let k in config.bans) {
+    let nowban = config.bans[k].filter((bant)=>{
+      let removet = parseInt(bant[2])||Infinity;
+      if (removet<new Date().getTime()) return false;
+      return true;
+    });
+    if (nowban != config.bans[k]) {
+      config.bans[k] = nowban;
+      saveConfig();
+    }
+  }
+},1000)
+
+//摇卦
 var gua = [
     "乾\n乾为天（乾卦）自强不息\n上上卦\n象曰：困龙得水好运交，不由喜气上眉梢，一切谋望皆如意，向后时运渐渐高。\n这个卦是同卦（下乾上乾）相叠。象征天，喻龙（德才的君子），又象征纯粹的阳和健，表明兴盛强健。乾卦是根据万物变通的道理，以“元、亨、利、贞”为卦辞，示吉祥如意，教导人遵守天道的德行。\n",
     "坤\n坤为地（坤卦）厚德载物\n上上卦\n象曰：肥羊失群入山岗，饿虎逢之把口张，适口充肠心欢喜，卦若占之大吉昌。\n这个卦是同卦（下坤上坤）相叠，阴性。象征地（与乾卦相反），顺从天。承载万物，伸展无穷无尽。坤卦以雌马为象征，表明地道生育抚养万物，而又依天顺时，性情温顺。它以“先迷后得”证明“坤”顺从“乾”，依随“乾”，才能把握正确方向，遵循正道，获取吉利。\n",
