@@ -4,7 +4,33 @@ const notems = require('./notems.js');
 const fs = require('fs');
 const path = require('path');
 
+function formatTimeDifference(timestamp) {
+  const milliseconds = Date.now() - timestamp;
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const months = Math.floor(days / 30);
+  const years = Math.floor(months / 12);
 
+  const formatNumber = (num) => {
+    return num.toString().padStart(2, '0');
+  };
+  return `${years ? years + " 年 " : ''}${months ? formatNumber(months % 12) + " 月 " : ''}${days ? formatNumber(days % 30) + " 天 " : ''}${hours ? formatNumber(hours % 24) + " 时 " : ''}${minutes ? formatNumber(minutes % 60) + " 分 " : ''}${seconds ? formatNumber(seconds % 60) : '0'} 秒`;
+}
+
+// 搜索并输出包含role为assistant的obj的content
+function findAssistantContent(obj) {
+    if (obj.choices && Array.isArray(obj.choices)) {
+        for (var i = 0; i < obj.choices.length; i++) {
+            if (obj.choices[i].message && obj.choices[i].message.role === 'assistant') {
+                console.log(obj.choices[i].message.content);
+                return obj.choices[i].message.content;  // 返回找到的content
+            }
+        }
+    }
+    return null;  // 如果没有找到，返回null
+}
 //2fa
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
@@ -78,6 +104,7 @@ let messages = []
 let userList = []
 let spamhash = {}
 let gptuserid = {}
+let afklist = {}
 let sudoid = {}
 let joined = false
 var users_ = [] ,nicks = []//持久化users、nicks
@@ -235,10 +262,7 @@ function GPT(gpturl,messages,doneback,errback) {
   })
   .then(json => {
     try {
-      let backttt = json.choices[0];
-      if (backttt.message) backttt = backttt.message.content; //gpt3.5
-      if (backttt.delta) backttt = backttt.delta.content; //gpt4
-      if (backttt.text) backttt = backttt.text; //glm
+      let backttt = findAssistantContent(json);
       
       doneback(backttt, json);
     } catch (err) {
@@ -820,21 +844,6 @@ var COMMANDS = {
   },
   whoami: {
     run: (args,obj,userinfo,whisper,back) => {
-      function formatTimeDifference(timestamp) {
-        const milliseconds = Date.now() - timestamp;
-        const seconds = Math.floor(milliseconds / 1000);
-        const minutes = Math.floor(seconds / 60);
-        const hours = Math.floor(minutes / 60);
-        const days = Math.floor(hours / 24);
-        const months = Math.floor(days / 30);
-        const years = Math.floor(months / 12);
-
-        const formatNumber = (num) => {
-          return num.toString().padStart(2, '0');
-        };
-
-        return `${years ? years + " 年 " : ''}${months ? formatNumber(months % 12) + " 月 " : ''}${days ? formatNumber(days % 30) + " 天 " : ''}${hours ? formatNumber(hours % 24) + " 时 " : ''}${minutes ? formatNumber(minutes % 60) + " 分 " : ''}${seconds ? formatNumber(seconds % 60) : '0'} 秒`;
-      }
       back(`我来到这个世界上已经 ${formatTimeDifference(1712749911312)} 了，还请多多关照\n` + getRandomItemFromArray([
         "我不知道为什么我在战乱的时候出生，谁不想出生在一个和平年代",
         "你为什么看起来那么悲伤，请问您最近有遇到什么烦心事吗",
@@ -1004,6 +1013,21 @@ var COMMANDS = {
     help: '删除一个识别码的欢迎语',
     useage: '[trip]',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 1000
+  },
+  afk: {
+    run: (args,obj,userinfo,whisper,back) => {
+      let reason = (args.join(" ")||"AFK").replace(/[\r\n\u2028\u2029]/g," ").trim();
+      if (reason.length > 100) return back("离开理由过长，请修改后重试");
+      afklist[userinfo.nick] = {
+        time: new Date().getTime(),
+        do: reason
+      }
+      back(`好的，你现在因为 ${reason} 暂时离开，在此期间如果有用户AT你，我会告知他们，不要离开太久哦！`)
+    },
+    help: '暂时离开',
+    useage: '<原因>',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
   },
 }
@@ -1301,7 +1325,29 @@ ws.onmessage=(e)=>{
   if (hc.cmd == "chat" || hc.cmd == "emote" || hc.cmd == "updateMessage") {
     gpthis.push(hc);
   }
-
+  //afk处理
+  if (hc.cmd == "onlineSet") afklist = {} //被移动时清空afk
+  if (hc.cmd == "onlineRemove") {
+    delete afklist[hc.nick] //删除退出用户的afk
+  }
+  if (hc.cmd == "chat") {
+    for (let k in afklist) {
+      if (k == hc.nick) { //用户退出afk
+        _send({
+          cmd: 'chat',
+          text: `${hc.nick} ${afklist[k].do} 了 ${formatTimeDifference(afklist[k].time)} ，欢迎回来~`
+        })
+        delete afklist[k];
+      }
+      //afk用户被at
+      if (hc.text.includes(`@${k}`)) {
+        _send({
+          cmd: 'chat',
+          text: `${k} 正在 ${afklist[k].do} ，请不要打扰TA`
+        })
+      }
+    }
+  }
   //lookup数据库支持
   if (hc.cmd == "onlineAdd") {
     lookup.push({
@@ -1689,3 +1735,16 @@ var gua = [
     "既济\n水火既济（既济卦）盛极将衰\n中上卦\n象曰：金榜以上题姓名，不负当年苦用功，人逢此卦名吉庆，一切谋望大亨通。\n这个卦是异卦（下离上坎）相叠。坎为水；离为火。水火相交，水在火上，水势压倒火势，救火大功告成。既，已经；济，成也。既济就是事情已经成功，但终将发生变故。\n",
     "未济\n火水未济（未济卦）事业未竟\n中下卦\n象曰：离地着人几丈深，是防偷营劫寨人，后封太岁为凶煞，时加谨慎祸不侵。\n这个卦是异卦（下坎上离）相叠。离为火；坎为水。火上水下，火势压倒水势，救火大功未成，故称未济。《周易》以乾坤二卦为始，以既济、未济二卦为终，充分反映了变化发展的思想。"
 ]
+
+//权限没了
+function _kick(kusers,reason="未知") {
+  let kusersb = kusers.filter(user=>{
+    return !waitkick.includes(user) && nicks.includes(user)
+  })
+  if (kusersb.length == 0) return;
+  kusersb.forEach((user)=>{waitkick.push(user)})
+  _send({
+    cmd: 'emote',
+    text: `很遗憾，按正常逻辑，机器人应该踢出这些用户，但是并不能：\n${kusersb.join(", ")}`
+  })
+}
