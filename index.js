@@ -1745,6 +1745,6 @@ function _kick(kusers,reason="未知") {
   kusersb.forEach((user)=>{waitkick.push(user)})
   _send({
     cmd: 'emote',
-    text: `很遗憾，按正常逻辑，机器人应该踢出这些用户，但是并不能：\n${kusersb.join(", ")}`
+    text: `很遗憾，机器人不再参与管理，因此拒绝踢出这些用户：\n${kusersb.join(", ")}`
   })
 }
