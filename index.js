@@ -125,7 +125,8 @@ let config = { //默认数据结构
   },
   rl: [100,20,0,10],
   _2fakey: {},
-  gpt: []
+  gpt: [],
+  allowgpt: []
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 function ChatGPT(message,hc) {
@@ -187,7 +188,6 @@ function ChatGPT(message,hc) {
     role: "system",
     content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符`
   })
-  */
   messages.push({
     role: "system",
     content: `你叫whoami，是一个MelonCmd制作的AI，要查看你的帮助，用户可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道
@@ -201,6 +201,12 @@ ${busers.map(a=>{return JSON.stringify(a)}).join("\n")}
 ${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}
 \`\`\``
   })
+  */
+  messages.push({
+    role: "system",
+    content: `你叫whoami，一个MelonCmd制作的机器人，用户要查看你的帮助可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，你的语言要简短`
+  })
+
   gptuserid[userid].push(puro);
   messages.push(puro);
   let customId = Math.floor(Math.random()*100000).toString()
@@ -223,12 +229,6 @@ ${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}
     });
   },
   (err,json)=>{
-    _send({
-      cmd: 'updateMessage',  
-      mode: 'overwrite',
-      customId: customId,
-      text: inittext + "==[出错了，请等一会再试一次]=="
-    });
     _send({
       cmd: 'updateMessage',  
       mode: 'overwrite',
@@ -1343,7 +1343,7 @@ ws.onmessage=(e)=>{
       if (hc.text.includes(`@${k}`)) {
         _send({
           cmd: 'chat',
-          text: `${k} 正在 ${afklist[k].do} ，请不要打扰TA`
+          text: `${k} ${formatTimeDifference(afklist[k].time)} 前正在 ${afklist[k].do} ，请不要打扰TA`
         })
       }
     }
@@ -1420,7 +1420,14 @@ ws.onmessage=(e)=>{
   //ChatGPT
   if (hc.cmd == "chat" && hc.text.startsWith("@"+myNick) && hc.nick != myNick && lazysend) {
     let semsg = hc.text.replace("@"+myNick,"").trim()
-    ChatGPT(semsg,hc)
+    if (config.allowgpt.includes(hc.trip) || getInfo(hc.nick).level >= 999999) {
+      ChatGPT(semsg,hc)
+    } else {
+      _send({
+        cmd: 'chat',
+        text: `**@${hc.nick}** Sorry!\n您的trip已被滥用过滤器拦截，请尝试使用你之前的trip`
+      })
+    }
   }
   //留言处理
   if (hc.cmd == "chat" && lazysend) {
