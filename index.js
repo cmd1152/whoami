@@ -31,41 +31,7 @@ function findAssistantContent(obj) {
     }
     return null;  // 如果没有找到，返回null
 }
-//2fa
-const speakeasy = require('speakeasy');
-const qrcode = require('qrcode');
-const _2fa = {
-  getKey: (issuer, username) => {
-    let secret = speakeasy.generateSecret({ length: 20 })
-    return {
-      base32: secret.base32,
-      otpauth_url: speakeasy.otpauthURL({ secret: secret.ascii, label: username, issuer: issuer})
-    };
-  },
-  verify: (secret, otpToken) => {
-    return speakeasy.totp.verify({
-      secret: secret.base32,
-      encoding: 'base32',
-      token: otpToken
-    });
-  },
-  qrcode: (secret) => {
-    return new Promise((resolve) => {
-      qrcode.toDataURL(secret.otpauth_url, function(err, data_url) {
-        if (err) resolve(false);
-        let notepath = `message${Math.floor(Math.random()*99999999999999999-10000000000000000)+10000000000000000}`
-        notems.set(notepath,`![](${data_url})`)
-          .then(()=>{
-            resolve(`https://note.ms/${notepath}.md`)
-          })
-          .catch(()=>{
-            resolve(false)
-          })
-      });
-    });
 
-  }
-}
 function reply(args) {//来源于crosst.chat，有改动
   let replyText = '';
   let originalText = args.text;
@@ -93,6 +59,7 @@ function reply(args) {//来源于crosst.chat，有改动
   replyText += '@' + nick + ' ';
   return replyText;
 }
+
 var nicks = [],users = [],nicks_ = [],users = [],checkChannel = false
 var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
 var cmdstart = "!"
@@ -124,7 +91,6 @@ let config = { //默认数据结构
     text: []
   },
   rl: [100,20,0,10],
-  _2fakey: {},
   gpt: [],
   allowgpt: []
 }
@@ -860,58 +826,6 @@ var COMMANDS = {
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
   },
-  "2fa": {
-    run: (args,obj,userinfo,whisper,back) => {
-      if (!whisper) return back("请私信调用")
-      if (!userinfo.trip) return back("你识别码没了？")
-      let secretKey = _2fa.getKey("whoami",userinfo.trip)
-      _2fa.qrcode(secretKey) 
-        .then((noteurl)=>{
-          if (noteurl) {
-            config._2fakey[userinfo.trip] = secretKey
-            back(`2fa成功创建，这是你唯一一次看见此notems二维码地址，请使用 Authenticator 扫描他们，如果你不慎丢失，再执行一次这个命令重新生成\n${noteurl}`)
-            saveConfig()
-          } else back("创建失败")
-        })
-    },
-    help: '为授权用户创建新的2fa验证，这个验证用于在无法使用识别码时证明身份',
-    useage: '',
-    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 1000
-  },
-  sudo: {
-    run: (args,obj,userinfo,whisper,back) => {
-      if (!whisper) return back("请私信调用")
-      let payload = [...args]
-      let _2fatrip = payload.shift()
-      let _2faKey = payload.shift()
-      if (!_2faKey) return back("参数错误")
-      let isTr = false
-      for (let k in config._2fakey) {
-        if (_2fa.verify(config._2fakey[k],_2faKey) && k == _2fatrip && config.modtrip.includes(k)) isTr = k
-      }
-      if (isTr) {
-        sudoid[userinfo.userid] = true
-        back("成功提权，但重进或者改名就没，部分命令用不了，kick可以用ban再unban代替")
-        _send({cmd:'emote',text:`>\n[${isTr}]${userinfo.nick} 成功提权`})
-      } else back("2fa代码或识别码无效")
-    },
-    help: '通过2fa验证证明你的授权身份，成功后你被直接提升为授权用户（重进或者改名就没）',
-    useage: '[绑定2fa的识别码] [2fa代码]',
-    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 1000
-  },
-  del2fa: {
-    run: (args,obj,userinfo,whisper,back) => {
-      if (args[0]) return back("参数错误")
-      delete config._2fakey[userinfo.trip]
-      back("已尝试删除，删没删成功我不道")
-    },
-    help: '强制删除一个识别码的2fa',
-    useage: '[绑定2fa的识别码]',
-    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 1000
-  },
   lock: {
     run: (args,obj,userinfo,whisper,back) => {
       if (whisper) return back("有什么见不得人的")
@@ -1578,11 +1492,6 @@ ws.onmessage=(e)=>{
         } else {
           COMMANDS[cmdname].run(cmdargs,hc,getInfo(hc.nick),false,(text)=>{_send({cmd:'chat',text:text},userlevel>=152?true:false)})
         }
-      } else {
-        _send({
-          cmd: 'chat',
-          text: '命令未找到'
-        })
       }
     } catch (e) {
       console.log(e)
@@ -1616,12 +1525,6 @@ ws.onmessage=(e)=>{
         } else {
           COMMANDS[cmdname].run(cmdargs,hc,getInfo(hc.from),true,(text)=>{_send({cmd:'whisper',nick:hc.from,text:">\n"+text},userlevel>=152?true:false)})
         }
-      } else {
-        _send({
-          cmd: 'whisper',
-          nick: hc.from,
-          text: '命令未找到'
-        })
       }
     } catch (e) {
       _send({
