@@ -4,6 +4,10 @@ const notems = require('./notems.js');
 const fs = require('fs');
 const path = require('path');
 
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 function formatTimeDifference(timestamp) {
   const milliseconds = Date.now() - timestamp;
   const seconds = Math.floor(milliseconds / 1000);
@@ -95,7 +99,7 @@ let config = { //默认数据结构
   allowgpt: []
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
-function ChatGPT(message,hc) {
+async function ChatGPT(message,hc) {
   let gpturl = getRandomItemFromArray(config.gpt);
   if (!gpturl) {
     _send({
@@ -122,58 +126,10 @@ function ChatGPT(message,hc) {
   gptuserid[userid].forEach(msg=>{
     messages.push(msg);
   })
-  let busers = [...users];
-  busers=busers.map(u=>{
-    return {
-      nick:u.nick,
-      trip:u.trip,
-      hash:u.hash,
-      color:u.color,
-      level:u.level,
-      uType:u.uType
-    }
-  })
-  /*
-  messages.push({
-    role: "system", 
-    content: `你叫whoami，是一个MelonCmd制作的AI，要查看你的帮助，用户可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，在线用户（按逗号分隔）：${nicks.join(", ")}`
-  })
-  messages.push({
-    role: "system",
-    content: `在线列表（nick为用户名，trip为识别码，hash为哈希，color为颜色，level为等级，uType为用户类型，其他的都不重要，这些信息都是公开的）：\n${busers.map(a=>{return JSON.stringify(a)}).join("\n")}`
-  })
-  messages.push({
-    role: "system",
-    content: `你可以称这个向你提问的用户为${hc.nick}`
-  })
-  messages.push({
-    role: "system",
-    content: `最近的20条历史记录：\n${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}`
-  })
-  messages.push({
-    role: "system",
-    content: `请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符`
-  })
-  messages.push({
-    role: "system",
-    content: `你叫whoami，是一个MelonCmd制作的AI，要查看你的帮助，用户可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道
-在线列表（nick为用户名，trip为识别码，hash为哈希，color为颜色，level为等级，uType为用户类型，其他的都不重要，这些信息都是公开的）：
-\`\`\`
-${busers.map(a=>{return JSON.stringify(a)}).join("\n")}
-\`\`\`
-请使用中文回复用户，只发送你的Answer给用户，不要发送Understanding the Question或其他内容，你的语言要简短，你可以让用户去 https://hcwiki.gitbook.io/ 了解有关这里（Hack.Chat（简称HC）聊天室的lounge（简称lo）频道）和部分其他聊天室的信息和历史，你的消息长度尽量不要超过 1152 字符
-最近的20条历史记录：
-\`\`\`
-${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}
-\`\`\``
-  })
-  */
   messages.push({
     role: "system",
     content: `你叫whoami，一个MelonCmd制作的机器人，用户要查看你的帮助可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，你的语言要简短`
   })
-
-  gptuserid[userid].push(puro);
   messages.push(puro);
   let customId = Math.floor(Math.random()*100000).toString()
   _send({
@@ -181,33 +137,25 @@ ${gpthis.get().map(a=>{return JSON.stringify(a)}).join("\n")}
     text: `***期待模型：${gpturl[2]}*** ${inittext}请稍后，我正在思考你的问题...`,
     customId: customId
   })
-  GPT(gpturl,messages,  
-  (text, data)=>{
+  let data = await GPT(gpturl,messages);
+  if (data.ok) {
+    gptuserid[userid].push(puro);
     gptuserid[userid].push({
       role: 'assistant',
-      content: text.replace("You.com","ChatGPT")
+      content: data.content
     });
-    _send({
-      cmd: 'updateMessage',  
-      mode: 'overwrite',
-      customId: customId,
-      text: `***实际模型：${data.model}*** ${inittext}${text.replace(/You.com/g,"ChatGPT")}`
-    });
-  },
-  (err,json)=>{
-    _send({
-      cmd: 'updateMessage',  
-      mode: 'overwrite',
-      customId: customId,
-      text: inittext + "[出错了，请等一会再试一次]\n```\n" + JSON.stringify(json)
-    });
-  })
+  }
+  _send({
+    cmd: 'updateMessage',  
+    mode: 'overwrite',
+    customId: customId,
+    text: `***实际模型：${data.model || "whoami内核"}*** ${inittext}${data.content}`
+  });
 }
-function GPT(gpturl,messages,doneback,errback) {
-  fetch(gpturl[1]+"v1/chat/completions", {
+async function GPT(gpturl,messages,retry=0) {
+  let gptreq = await fetch(gpturl[1]+"v1/chat/completions", {
     "headers": {
       "accept": "application/json, text/event-stream",
-      "accept-language": "zh-CN,zh;q=0.9",
       "authorization": "Bearer " + gpturl[0],
       "content-type": "application/json",
       "model": gpturl[2]
@@ -223,21 +171,24 @@ function GPT(gpturl,messages,doneback,errback) {
     }),
     "method": "POST",
   })
-  .then(response => {
-    return response.json();
-  })
-  .then(json => {
-    try {
-      let backttt = findAssistantContent(json);
-      
-      doneback(backttt, json);
-    } catch (err) {
-      errback(err.message,json);
+  let gptdata = await gptreq.json();
+  let backttt = findAssistantContent(gptdata) || `无法找到OpenAI的答复：\n\`\`\`\n${JSON.stringify(gptdata)}`;
+  if (findAssistantContent(gptdata)) {
+    return {
+      ok: true,
+      content: backttt,
+      model: gptdata.model
     }
-  })
-  .catch(error => {
-    errback(error.message,false);
-  });
+  } else {
+    if (retry >= 10) {
+      return {
+        ok: false,
+        content: `多次尝试均失败：\n${backttt}`
+      }
+    }
+    await sleep(3000);
+    return await GPT(gpturl,messages,retry+1)
+  }
 }
 let lastsay = {}
 function getRandomItemFromArray(arr) {
