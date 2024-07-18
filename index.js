@@ -1205,7 +1205,7 @@ ws.onmessage=(e)=>{
         delete afklist[k];
       }
       //afk用户被at
-      if (hc.text.includes(`@${k}`)) {
+      if (hc.text.includes(`@${k}`) && afklist[k]) {
         _send({
           cmd: 'chat',
           text: `${k} ${formatTimeDifference(afklist[k].time)} 前正在 ${afklist[k].do} ，请不要打扰TA`
