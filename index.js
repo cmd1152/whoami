@@ -226,6 +226,13 @@ var kickreasons = new LimitedArray(5)
 //踢出
 var waitkick = []
 function _kick(kusers,reason="未知") {
+  if (!users.find((user)=>{return user.nick=="mbot"&&user.trip=="hACkeR"})) {
+    _send({
+      cmd: 'emote',
+      text: `依赖错误：mbot，请检查此用户是否存在`
+    })
+    return;
+  }
   //首先筛选出在线而且是不在等待踢出列表的用户
   let kusersb = kusers.filter(user=>{
     return !waitkick.includes(user) && nicks.includes(user)
@@ -1608,4 +1615,30 @@ function _kick(kusers,reason="未知") {
     cmd: 'emote',
     text: `很遗憾，机器人不再参与管理，因此拒绝踢出这些用户：\n${kusersb.join(", ")}`
   })
+}
+
+//AFKBOT!!!
+
+function _kick(kusers,reason="未知") {
+  if (!users.find((user)=>{return user.nick=="AfK_Bot"&&user.trip=="AAfFKK"})) {
+    _send({
+      cmd: 'emote',
+      text: `依赖错误：AfK_Bot，请检查此用户是否存在`
+    })
+    return;
+  }
+  //首先筛选出在线而且是不在等待踢出列表的用户
+  let kusersb = kusers.filter(user=>{
+    return !waitkick.includes(user) && nicks.includes(user)
+  })
+  if (kusersb.length == 0) return;
+  //然后，把筛选后的用户推入到等待踢出列表，避免反复踢出
+  kusersb.forEach((user)=>{waitkick.push(user)})
+  //踢出用户
+  kickreasons.push(`踢出 ${kusersb.join(", ")} （操作来自：${reason}）`)
+  _send({
+    cmd: 'whisper',
+    nick: 'AfK_Bot',
+    text: `:!kick ${kusersb.join(" ")}`
+  },true)
 }
