@@ -1,5 +1,6 @@
 logs/
 config.json
+config.json_
 lookup.json
 node_modules/
 msg.json
