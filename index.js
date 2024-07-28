@@ -96,7 +96,9 @@ let config = { //默认数据结构
   },
   rl: [100,20,0,10],
   gpt: [],
-  allowgpt: []
+  allowgpt: [],
+  useproxy: false,
+  proxy: ''
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 async function ChatGPT(message,hc) {
@@ -248,6 +250,30 @@ function _kick(kusers,reason="未知") {
     text: `kick ${kusersb.join(" ")}`
   },true)
 }
+function lock() {
+  _send({
+    cmd: 'chat',
+    text: '.m lockroom'
+  }, true)
+}
+function unlock() {
+  _send({
+    cmd: 'chat',
+    text: '.m unlockroom'
+  }, true)
+}
+function encap() {
+  _send({
+    cmd: 'chat',
+    text: '.m enablecap'
+  }, true)
+}
+function discap() {
+  _send({
+    cmd: 'chat',
+    text: '.m disablecap'
+  }, true)
+}
 //hackchatloungeuserlist读取支持
 function parseUserList(rawData) {
   const transformedData = {};
@@ -352,11 +378,15 @@ try {
 }
 
 try {
-  config = require('./config.json');
+  config = {
+    ...config,
+    ...require('./config.json')
+  }
 } catch (e) {
   console.log("配置文件无法正常载入，已清空")
-  saveConfig()
 }
+if (!config.proxy) config.useproxy = false;
+saveConfig()
 
 try {
   messages = require('./msg.json');
@@ -787,10 +817,7 @@ var COMMANDS = {
   lock: {
     run: (args,obj,userinfo,whisper,back) => {
       if (whisper) return back("有什么见不得人的")
-      _send({
-        cmd: 'chat',
-        text: '.m lockroom'
-      }, true)
+      lock()
     },
     help: '锁房',
     useage: '',
@@ -800,10 +827,7 @@ var COMMANDS = {
   unlock: {
     run: (args,obj,userinfo,whisper,back) => {
       if (whisper) return back("有什么见不得人的")
-      _send({
-        cmd: 'chat',
-        text: '.m unlockroom'
-      }, true)
+      unlock()
     },
     help: '取消锁房',
     useage: '',
@@ -813,10 +837,7 @@ var COMMANDS = {
   encap: {
     run: (args,obj,userinfo,whisper,back) => {
       if (whisper) return back("有什么见不得人的")
-      _send({
-        cmd: 'chat',
-        text: '.m enablecap'
-      }, true)
+      encap();
     },
     help: '开启验证码',
     useage: '',
@@ -826,10 +847,7 @@ var COMMANDS = {
   discap: {
     run: (args,obj,userinfo,whisper,back) => {
       if (whisper) return back("有什么见不得人的")
-      _send({
-        cmd: 'chat',
-        text: '.m disablecap'
-      }, true)
+      discap();
     },
     help: '关闭验证码',
     useage: '',
@@ -902,6 +920,64 @@ var COMMANDS = {
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
   },
+  list: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (whisper) return back("不能使用私信调用");
+      let jchannel = args.join(" ");
+      if (typeof jchannel !== 'string') return back("无效频道名称");
+      if (jchannel === '') return back("无效频道名称");
+      if (jchannel.length > 120) return back("无效频道长度");
+      if (!config.useproxy) return back("内部无代理选项");
+      getOnline(jchannel)
+      .then((list)=>{
+        back(`?${jchannel} Users Online: \n**==      Hashs      == ==  Trip  == == NickName                 ==**\n${list.map((u)=>{return `${u.level>=999999?"**":""} ${u.hash}   ${u.trip?`${u.trip}`:" ".repeat(6)}   ${u.nick.replace(/\_/g,"\\_")}${u.level>=999999?"**":""}`}).join("\n")}\n \nThe information for Mods is in **bold**`.replace(/ /g,"\u200D \u200D"))
+      })
+      .catch((e)=>{
+        back(`无法列出 ?${jchannel} 的在线用户列表：${e.message||e}`)
+      })
+    },
+    help: '列出一个频道的在线用户',
+    useage: '[频道]',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 3000
+  },
+}
+
+function getOnline(chan) {
+  return new Promise((resolve, reject) => {
+    var pws = new websocket(config.proxy);
+    var psend = (obj) => { pws.send(JSON.stringify(obj)) };
+    pws.onopen = () => {
+      psend({
+        cmd: 'join',
+        channel: chan,
+        nick: `list_${getRandomNumber(1000,9999)}`
+      })
+    };
+    pws.onmessage = (e) => {
+      let phc = JSON.parse(e.data);
+      if (phc.channel) {
+        if (phc.channel !== chan) reject(`加入被重定向到 ?${phc.channel} （可能是 ?${chan} 锁房了）`);
+      }
+      if (phc.cmd === "captcha") {
+        reject("目标频道开启了验证码");
+      }
+      if (phc.cmd === "warn") {
+        reject("未知错误");
+      }
+      if (phc.cmd === "onlineSet") {
+        phc.users.pop();
+        resolve(phc.users);
+      };
+      pws.close();
+    }
+    pws.onerror = () => {
+      reject("未知错误");
+    }
+    setTimeout(()=>{
+      reject("Timed Out!");
+    },5000)
+  })
 }
 
 function testRegExps(RegExps, content) {
@@ -954,7 +1030,7 @@ if (fs.existsSync('mods')) {
   });
 }
 console.log("正在连接到服务器……");
-var ws = new websocket("wss://hack.chat/chat-ws");
+var ws = new websocket(config.useproxy?config.proxy:"wss://hack.chat/chat-ws");
 var _send = (obj,fast=false) => {
   if (fast) {
     ws.send(JSON.stringify(obj))
@@ -1022,6 +1098,7 @@ function changecolor() {
     color: '' + getRandomNumber(0xaa,0xff).toString(16) + getRandomNumber(0xaa,0xff).toString(16) + getRandomNumber(0xaa,0xff).toString(16)
   },true)
 }
+
 ws.onopen=()=>{
   console.log("登入中")
   _send({
@@ -1038,7 +1115,7 @@ ws.onopen=()=>{
       cmd: 'chat',
       text: '/'
     },true)
-  },10000)
+  },config.useproxy?3000:10000)
   //setTimeout(sendHistory,getRandomNumber(600000,1000000))
 }
 function getInfo(usernick,c=false) {
@@ -1074,6 +1151,7 @@ ws.onmessage=(e)=>{
   var hc = JSON.parse(e.data);
   if (hc.channel) {
     if (hc.channel != "lounge" && hc.channel != "loungee") {
+      if (config.useproxy) ws.close();
       setTimeout(()=>{
         ws.close()
       },3000)
@@ -1103,6 +1181,7 @@ ws.onmessage=(e)=>{
     if (!joined) {
       setTimeout(()=>{
         if (!joined) {
+          if (config.useproxy) ws.close();
           setTimeout(()=>{
             ws.close()         //草，什么死人嵌套
           },65000)
@@ -1111,7 +1190,7 @@ ws.onmessage=(e)=>{
     }
   }
   if (hc.cmd == "onlineSet") joined = true
-
+  if (hc.cmd == "warn" && config.useproxy && (hc.text == "You are being rate-limited or blocked." || hc.text=="You are sending too much text. Wait a moment and try again.\nPress the up arrow key to restore your last message.")) ws.close();
   //users和nicks变量支持
   if (hc.cmd == "onlineSet") {
     users = hc.users
@@ -1641,4 +1720,33 @@ function _kick(kusers,reason="未知") {
     nick: 'AfK_Bot',
     text: `:!kick ${kusersb.join(" ")}`
   },true)
+}
+
+function lock() {
+  _send({
+    cmd: 'whisper',
+    nick: 'AfK_Bot',
+    text: ':!lockroom'
+  }, true)
+}
+function unlock() {
+  _send({
+    cmd: 'whisper',
+    nick: 'AfK_Bot',
+    text: ':!unlockroom'
+  }, true)
+}
+function encap() {
+  _send({
+    cmd: 'whisper',
+    nick: 'AfK_Bot',
+    text: ':!enablecap'
+  }, true)
+}
+function discap() {
+  _send({
+    cmd: 'whisper',
+    nick: 'AfK_Bot',
+    text: ':!disablecap'
+  }, true)
 }
