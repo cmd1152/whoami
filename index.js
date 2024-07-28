@@ -930,20 +930,48 @@ var COMMANDS = {
       if (!config.useproxy) return back("内部无代理选项");
       getOnline(jchannel)
       .then((list)=>{
-        back(`?${jchannel} Users Online: \n**==      Hashs      == ==  Trip  == == NickName                 ==**\n${list.map((u)=>{return `${u.level>=999999?"**":""} ${u.hash}   ${u.trip?`${u.trip}`:" ".repeat(6)}   ${u.nick.replace(/\_/g,"\\_")}${u.level>=999999?"**":""}`}).join("\n")}\n \nThe information for Mods is in **bold**`.replace(/ /g,"\u200D \u200D"))
+        back(`@**${userinfo.nick}** Users Online: \n**==      Hashs      == ==  Trip  == == NickName                 ==**\n${list.map((u)=>{return `${u.level>=999999?"**":""} ${u.hash}   ${u.trip?`${u.trip}`:" ".repeat(6)}   ${u.nick.replace(/\_/g,"\\_")}${u.level>=999999?"**":""}`}).join("\n")}\n \nThe information for Mods is in **bold**`.replace(/ /g,"\u200D \u200D"))
       })
       .catch((e)=>{
-        back(`无法列出 ?${jchannel} 的在线用户列表：${e.message||e}`)
+        back(`@**${userinfo.nick}** 无法列出在线用户列表：${e.message||e}`)
       })
     },
     help: '列出一个频道的在线用户',
-    useage: '[频道]',
+    useage: '[频道（允许任何字符！空格、换行或者更多！）]',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 3000
   },
+  sent: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (whisper) return back("不能使用私信调用");
+      let datas = [...new Set(args)];
+      if (datas.length < 2) return back("参数不足");
+      let jchannel = encodeURIComponent(datas.shift());
+      datas = datas.join(" ");
+      if (typeof jchannel !== 'string') return back("无效频道名称");
+      if (jchannel === '') return back("无效频道名称");
+      if (jchannel.length > 120) return back("无效频道长度");
+      if (!config.useproxy) return back("内部无代理选项");
+      if (datas.length > 3000) return back("发送的内容不能超过 3000 字符")
+      getOnline(jchannel,`message${getRandomNumber(1000,9999)}`,{
+        cmd: 'chat',
+        text: `**User (${userinfo.hash})${userinfo.trip?`[${userinfo.trip}]`:""}${userinfo.nick} sent a message from ?${obj.channel} :**\n${datas}`
+      })
+      .then((list)=>{
+        back(`@**${userinfo.nick}** 成功发送消息，${list.length} 个用户将看见你的消息`)
+      })
+      .catch((e)=>{
+        back(`@**${userinfo.nick}** 无法发送消息：${e.message||e}`)
+      })
+    },
+    help: '发送一个消息到指定频道',
+    useage: '[频道（空格等特殊字符需要 encodeURIComponent）] [内容（允许任何字符！空格、换行或者更多！）]',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 5000
+  },
 }
 
-function getOnline(chan) {
+function getOnline(chan,name=`list${getRandomNumber(1000,9999)}`,data=false) {
   return new Promise((resolve, reject) => {
     var pws = new websocket(config.proxy);
     var psend = (obj) => { pws.send(JSON.stringify(obj)) };
@@ -951,7 +979,7 @@ function getOnline(chan) {
       psend({
         cmd: 'join',
         channel: chan,
-        nick: `list_${getRandomNumber(1000,9999)}`
+        nick: name
       })
     };
     pws.onmessage = (e) => {
@@ -966,6 +994,7 @@ function getOnline(chan) {
         reject("未知错误");
       }
       if (phc.cmd === "onlineSet") {
+        if (data) psend(data);
         phc.users.pop();
         resolve(phc.users);
       };
@@ -1035,6 +1064,12 @@ var _send = (obj,fast=false) => {
   if (fast) {
     ws.send(JSON.stringify(obj))
   } else waitsend.push(JSON.stringify(obj))
+}
+var _chat = (text,fast=false) => {
+  _send({
+    cmd: 'chat',
+    text: text
+  }, fast)
 }
 setInterval(()=>{
   if (waitsend.length == 0 || !cansend) {
