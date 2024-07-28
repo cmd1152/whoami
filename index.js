@@ -930,7 +930,7 @@ var COMMANDS = {
       if (!config.useproxy) return back("内部无代理选项");
       getOnline(jchannel)
       .then((list)=>{
-        back(`@**${userinfo.nick}** Users Online: \n**==      Hashs      == ==  Trip  == == NickName                 ==**\n${list.map((u)=>{return `${u.level>=999999?"**":""} ${u.hash}   ${u.trip?`${u.trip}`:" ".repeat(6)}   ${u.nick.replace(/\_/g,"\\_")}${u.level>=999999?"**":""}`}).join("\n")}\n \nThe information for Mods is in **bold**`.replace(/ /g,"\u200D \u200D"))
+        back(`@**${userinfo.nick}** ++${list.length}++ Users Online: \n**==      Hashs      == ==  Trip  == == NickName                 ==**\n${list.map((u)=>{return `${u.level>=999999?"**":""} ${u.hash}   ${u.trip?`${u.trip}`:" ".repeat(6)}   ${u.nick.replace(/\_/g,"\\_")}${u.level>=999999?"**":""}`}).join("\n")}\n \nThe information for Mods is in **bold**`.replace(/ /g,"\u200D \u200D"))
       })
       .catch((e)=>{
         back(`@**${userinfo.nick}** 无法列出在线用户列表：${e.message||e}`)
