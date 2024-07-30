@@ -3,6 +3,7 @@ const axios = require('axios');
 const notems = require('./notems.js');
 const fs = require('fs');
 const path = require('path');
+const AbortController = require('abort-controller');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -154,40 +155,57 @@ async function ChatGPT(message,hc) {
   });
 }
 async function GPT(gpturl,messages,retry=0) {
-  let gptreq = await fetch(gpturl[1]+"v1/chat/completions", {
-    "headers": {
-      "accept": "application/json, text/event-stream",
-      "authorization": "Bearer " + gpturl[0],
-      "content-type": "application/json",
-      "model": gpturl[2]
-    },
-    "body": JSON.stringify({
-      messages: messages,
-      stream: false,
-      model: gpturl[2],
-      temperature:0.5,
-      presence_penalty:0,
-      frequency_penalty:0,
-      top_p:1
-    }),
-    "method": "POST",
-  })
-  let gptdata = await gptreq.json();
-  let backttt = findAssistantContent(gptdata) || `无法找到OpenAI的答复：\n\`\`\`\n${JSON.stringify(gptdata)}`;
-  if (findAssistantContent(gptdata)) {
-    return {
-      ok: true,
-      content: backttt,
-      model: gptdata.model
+  try {
+    let controller = new AbortController();
+    let timeout = setTimeout(() => {
+      controller.abort();
+    }, 60000);
+    let gptreq = await fetch(gpturl[1]+"v1/chat/completions", {
+      "headers": {
+        "accept": "application/json, text/event-stream",
+        "authorization": "Bearer " + gpturl[0],
+        "content-type": "application/json",
+        "model": gpturl[2]
+      },
+      "body": JSON.stringify({
+        messages: messages,
+        stream: false,
+        model: gpturl[2],
+        temperature:0.5,
+        presence_penalty:0,
+        frequency_penalty:0,
+        top_p:1
+      }),
+      "method": "POST",
+      signal: controller.signal
+    })
+    clearTimeout(timeout);
+    let gptdata = gptreq?await gptreq.json():{};
+    let backttt = findAssistantContent(gptdata) || `无法找到OpenAI的答复：\n\`\`\`\n${JSON.stringify(gptdata)}`;
+    if (findAssistantContent(gptdata)) {
+      return {
+        ok: true,
+        content: backttt,
+        model: gptdata.model
+      }
+    } else {
+      if (retry >= 3) {
+        return {
+          ok: false,
+          content: `多次尝试均失败：\n${backttt}`
+        }
+      }
+      await sleep(1000);
+      return await GPT(gpturl,messages,retry+1)
     }
-  } else {
-    if (retry >= 10) {
+  } catch (e) {
+    if (retry >= 3) {
       return {
         ok: false,
-        content: `多次尝试均失败：\n${backttt}`
+        content: `多次尝试均失败：\n${e.message||e||"未知错误"}`
       }
     }
-    await sleep(3000);
+    await sleep(1000);
     return await GPT(gpturl,messages,retry+1)
   }
 }
