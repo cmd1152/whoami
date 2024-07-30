@@ -65,7 +65,6 @@ function reply(args) {//来源于crosst.chat，有改动
 }
 
 var nicks = [],users = [],nicks_ = [],users = [],checkChannel = false
-var myNick = `whoami_${Math.floor(Math.random()*9999-1000)+1000}`
 var cmdstart = "!"
 var cansend = true
 //lookup读写支持
@@ -401,6 +400,21 @@ try {
   console.log("文件缓存无法正常载入，已清空")
   saveUser()
 }
+
+
+var myNick = `whoami`
+var oldNick = myNick;
+var zombiek = false
+if (!config.useproxy) {
+  myNick += `_${Math.floor(Math.random()*9999-1000)+1000}`;
+  delete config.zombie;
+}
+if (config.zombie) {
+  myNick += `_${Math.floor(Math.random()*9999-1000)+1000}`;
+  zombiek = true
+}
+delete config.zombie;
+saveConfig();
 
 var COMMANDS = {
  help: {
@@ -939,7 +953,7 @@ var COMMANDS = {
     help: '列出一个频道的在线用户',
     useage: '[频道（允许任何字符！空格、换行或者更多！）]',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 3000
+    rl: 5000
   },
   sent: {
     run: (args,obj,userinfo,whisper,back) => {
@@ -953,7 +967,7 @@ var COMMANDS = {
       if (jchannel.length > 120) return back("无效频道长度");
       if (!config.useproxy) return back("内部无代理选项");
       if (datas.length > 3000) return back("发送的内容不能超过 3000 字符")
-      getOnline(jchannel,`message${getRandomNumber(1000,9999)}`,{
+      getOnline(jchannel,`message${getRandomNumber(1000,9999)}`,'',{
         cmd: 'chat',
         text: `**User (${userinfo.hash})${userinfo.trip?`[${userinfo.trip}]`:""}${userinfo.nick} sent a message from ?${obj.channel} :**\n${datas}`
       })
@@ -969,9 +983,27 @@ var COMMANDS = {
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 5000
   },
+  trip: {
+    run: (args,obj,userinfo,whisper,back) => {
+      let passs = args.join(" ");
+      if (passs.length == 0) return back("未提供密码");
+      if (!config.useproxy) return back("内部无代理选项");
+      getOnline(`${getRandomNumber(100000000,999999999)}`,`trip${getRandomNumber(1000,9999)}`,passs,false,true)
+      .then((tr)=>{
+        back(`@**${userinfo.nick}** 对应的识别码为：${tr.trip||"无识别码"}`)
+      })
+      .catch((e)=>{
+        back(`@**${userinfo.nick}** 无法获取识别码：${e.message||e}`)
+      })
+    },
+    help: '获取这个密码的识别码',
+    useage: '[密码（允许任何字符！空格、换行或者更多！）]',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 5000
+  },
 }
 
-function getOnline(chan,name=`list${getRandomNumber(1000,9999)}`,data=false) {
+function getOnline(chan,name=`list${getRandomNumber(1000,9999)}`,passs='',data=false,getme=false) {
   return new Promise((resolve, reject) => {
     var pws = new websocket(config.proxy);
     var psend = (obj) => { pws.send(JSON.stringify(obj)) };
@@ -979,7 +1011,8 @@ function getOnline(chan,name=`list${getRandomNumber(1000,9999)}`,data=false) {
       psend({
         cmd: 'join',
         channel: chan,
-        nick: name
+        nick: name,
+        password: passs
       })
     };
     pws.onmessage = (e) => {
@@ -995,8 +1028,10 @@ function getOnline(chan,name=`list${getRandomNumber(1000,9999)}`,data=false) {
       }
       if (phc.cmd === "onlineSet") {
         if (data) psend(data);
-        phc.users.pop();
-        resolve(phc.users);
+        let mtrip = phc.users.pop();
+        if (getme) {
+          resolve(mtrip)
+        } else resolve(phc.users);
       };
       pws.close();
     }
@@ -1092,7 +1127,7 @@ setInterval(()=>{
     return;
   }
   ws.send(waitsend.shift())
-},3000)
+},config.useproxy?500:3000)
 function yiyan(textpa) {
   axios.get("https://v1.hitokoto.cn/")
     .then((_0x24a)=>{
@@ -1214,6 +1249,11 @@ ws.onmessage=(e)=>{
   if (hc.cmd == "warn" || hc.cmd == "info") {
     //3秒后还没有onlineSet就是死了
     if (!joined) {
+      if (hc.text == "Nickname taken") {
+        config.zombie = true;
+        saveConfig();
+        ws.close();
+      }
       setTimeout(()=>{
         if (!joined) {
           if (config.useproxy) ws.close();
@@ -1226,6 +1266,14 @@ ws.onmessage=(e)=>{
   }
   if (hc.cmd == "onlineSet") joined = true
   if (hc.cmd == "warn" && config.useproxy && (hc.text == "You are being rate-limited or blocked." || hc.text=="You are sending too much text. Wait a moment and try again.\nPress the up arrow key to restore your last message.")) ws.close();
+
+  if (hc.cmd == "onlineRemove" && zombiek) {
+    let zombieu = nicks.find((n)=>{return n.toLowerCase() == oldNick.toLowerCase()});
+    if (zombieu && hc.nick == zombieu) {
+      ws.close();
+    }
+  }
+
   //users和nicks变量支持
   if (hc.cmd == "onlineSet") {
     users = hc.users
@@ -1267,7 +1315,12 @@ ws.onmessage=(e)=>{
     users_.push(payload)
   }
 
-
+  if (hc.cmd == "onlineSet" && zombiek) {
+    let zombieu = nicks.find((n)=>{return n.toLowerCase() == oldNick.toLowerCase()});
+    if (zombieu) {
+      _kick([zombieu],"反僵尸号");
+    }
+  }
   //封禁用户支持
   if (hc.cmd == "onlineAdd" || hc.cmd == "onlineSet") checkBan()
   //屏蔽词支持
