@@ -2,12 +2,14 @@
 const axios = require('axios');
 const notems = require('./notems.js');
 const fs = require('fs');
+const cheerio = require('cheerio');
 const path = require('path');
 const AbortController = require('abort-controller');
 
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
 
 function formatTimeDifference(timestamp) {
   const milliseconds = Date.now() - timestamp;
@@ -129,30 +131,132 @@ async function ChatGPT(message,hc) {
     messages.push(msg);
   })
   messages.push({
-    role: "system",
-    content: `你叫whoami，一个MelonCmd制作的机器人，用户要查看你的帮助可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，你的语言要简短`
+    role: "user",
+    content: `你叫whoami，一个MelonCmd制作的机器人，我要查看你的帮助可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，你的语言要简短，我叫 ${hc.nick} ，下面是我公开的信息（nick名称、hash哈希、trip识别码、level用户等级、uType用户类型、color用户名颜色、userid用户标识符）：
+${JSON.stringify(getInfo(hc.nick),null,2)}`
   })
   messages.push(puro);
   let customId = Math.floor(Math.random()*100000).toString()
   _send({
     cmd: 'chat',
-    text: `***期待模型：${gpturl[2]}*** ${inittext}请稍后，我正在思考你的问题...`,
+    text: `***期待模型：${gpturl[2]}*** ${inittext}请稍后，我正在理解你的问题...`,
     customId: customId
   })
-  let data = await GPT(gpturl,messages);
-  if (data.ok) {
-    gptuserid[userid].push(puro);
-    gptuserid[userid].push({
-      role: 'assistant',
-      content: data.content
-    });
+  let odata = await GPT(gpturl,[
+    {
+      role: "system",
+      content: `请判断用户的prompt是否需要读取聊天室在线列表、读取历史记录、使用搜索引擎，你的输出必须是由下面选项组成的：
+user：需要读取完整的在线列表（包括用户信息：nick名称、hash哈希、trip识别码、level用户等级、uType用户类型、color用户名颜色、userid用户标识符）
+nick：只需要读取在线用户的名称
+history：需要读取最近20条历史记录
+search：需要使用搜索引擎
+
+
+你的返回必须是一个或多个以换行分隔的json，json的格式是 {"cmd":"选项名称"}
+
+比如需要搜索 hackchat，对应的json就是 {"cmd":"search","word":"hackchat"}
+如果用户的内容需要读取在线列表完成，你需要返回 {"cmd":"user"} 或者 {"cmd":"nick"}
+如果用户的内容需要读取聊天室历史记录完成，你需要返回{"cmd":"history"}
+
+如果用户的内容需要同时读取历史记录和使用搜索引擎搜索 hackchat，你需要返回这样子格式的
+\`\`\`
+{"cmd":"history"}
+{"cmd":"search","word":"hackchat"}
+\`\`\`
+
+你的返回只能是一行或多行json，不需要使用代码块包裹，否则你会被销毁
+`
+    },
+  {
+    role: 'user',
+    content: message
   }
-  _send({
-    cmd: 'updateMessage',  
-    mode: 'overwrite',
-    customId: customId,
-    text: `***实际模型：${data.model || "whoami内核"}*** ${inittext}${data.content}`
-  });
+  ]);
+  if (odata.ok) {
+    try {
+      let jsons = odata.content.split("\n").map((a)=>{return JSON.parse(a.trim())})
+      _send({
+        cmd: 'updateMessage',  
+        mode: 'overwrite',
+        customId: customId,
+        text: `***解析模型：${odata.model || "whoami内核"}*** ${inittext}请稍后，正在处理你的问题...`
+      }); 
+      async function nextjson() {
+        let json = jsons.shift();     
+        if (!json) {     
+          let data = await GPT(gpturl,messages);
+          if (data.ok) {
+            gptuserid[userid].push(puro);
+            gptuserid[userid].push({
+              role: 'assistant',
+              content: data.content
+            });
+          }
+          _send({
+            cmd: 'updateMessage',  
+            mode: 'overwrite',
+            customId: customId,
+            text: `***实际模型：${data.model || "whoami内核"}*** ${inittext}${data.content}`
+          }); 
+          return;
+        }
+        switch(json.cmd) {
+          case 'user':
+            messages.push({
+              role: 'system',
+              content: `在线用户列表（包括用户信息：nick名称、hash哈希、trip识别码、level用户等级、uType用户类型、color用户名颜色、userid用户标识符）这些都是公开的：
+${users.map((user)=>{return JSON.stringify(user)}).join("\n")}`
+            })
+            break;
+          case 'nick':
+            messages.push({
+              role: 'system',
+              content: `在线用户列表（逗号分隔）：${nicks.join(", ")}`
+            })
+            break;
+          case 'history':
+            messages.push({
+              role: 'system',
+              content: `最近的20条历史记录：
+gpthis.get().map((his)=>{return JSON.stringify(his)})`
+            })
+            break;
+          case 'search':
+            let seareq = await fetch(`https://cn.bing.com/search?q=${encodeURIComponent(json.word)}&ensearch=1`);
+            let $ = cheerio.load(await seareq.text());
+            let data = $('#b_content').text();
+            let searegex = /(.+)\n(https?:\/\/\S+)\n(.+?)\n\n/g;
+            let sd = data.replace(searegex, "[$1]($2)\n$3\n\n").substring(0,3000);
+            console.log(sd)
+            messages.push({
+              role: 'system',
+              content: `关键词 \`${json.word}\` 的搜索结果：\n${sd}`
+            })
+            break;
+          default:
+        }
+        nextjson()
+      }
+      nextjson()
+    } catch (e) {
+      console.error(e)
+      _send({
+        cmd: 'updateMessage',  
+        mode: 'overwrite',
+        customId: customId,
+        text: `***实际模型：whoami内核*** ${inittext}无法理解你的问题，请重试\n${e.message||e||"Unknown Error"}`
+      });
+      return;
+    }
+  } else {
+    _send({
+      cmd: 'updateMessage',  
+      mode: 'overwrite',
+      customId: customId,
+      text: `***实际模型：whoami内核*** ${inittext}无法理解你的问题，请重试\n${odata.content}`
+    });
+    return;
+  }
 }
 async function GPT(gpturl,messages,retry=0) {
   try {
