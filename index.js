@@ -580,7 +580,7 @@ var COMMANDS = {
         } else back("没有这个命令")
       } else {
         let sortedCommands = Object.keys(COMMANDS).sort((a, b) => a.localeCompare(b)).filter((n)=>{return isCanUse(n,ul)})
-        back(`\n### 命令列表\n \`${sortedCommands.join("`, `")}\`\n使用 \`${cmdstasrt}help [命令名称]\` 查看详细帮助`)
+        back(`\n### 命令列表\n \`${sortedCommands.join("`, `")}\`\n使用 \`${cmdstart}help [命令名称]\` 查看详细帮助`)
       }
     },
     help: '显示帮助，如果传入一个命令，将显示这个命令的详细介绍，否则显示帮助列表',
