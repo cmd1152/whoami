@@ -80,9 +80,11 @@ let gptuserid = {}
 let afklist = {}
 let sudoid = {}
 let joined = false
+let blacks = []
 var users_ = [] ,nicks = []//持久化users、nicks
 let config = { //默认数据结构
-  modtrip: ["cmdTV+"],
+  admin: "cmdTV+",
+  modtrip: [],
   password: "",
   hackchatloungeuserlist: "",
   ignore: {
@@ -94,13 +96,22 @@ let config = { //默认数据结构
     nick: [],
     trip: [],
     hash: [],
-    text: []
+    text: [],
+    color: []
   },
   rl: [100,20,0,10],
   gpt: [],
   allowgpt: [],
   useproxy: false,
   proxy: ''
+}
+function getLevel(userinfo) {
+  if (userinfo.trip == config.admin) return 999999999999;
+  if (userinfo.level < 152 && config.modtrip.includes(userinfo.trip)) return 152;
+  return userinfo.level;
+}
+function isAdmin(userinfo) {
+  return userinfo.trip == config.admin
 }
 let nosafetrip = fs.readFileSync("nosafetrips.txt").toString().split("\n").map(trip_pass=>{return trip_pass.trim().split(" ")})
 async function ChatGPT(message,hc) {
@@ -491,11 +502,25 @@ function saveUser() {
   } catch (err) {}
 }
 
+function saveBlacks() {
+  try {
+    const jsonData = JSON.stringify(blacks);
+    fs.writeFileSync('./blacks.json', jsonData, 'utf8');
+  } catch (err) {}
+}
+
 try {
   lookup = require('./lookup.json');
 } catch (e) {
   console.log("lookup数据库无法正常载入，已清空")
   saveLookup()
+}
+
+try {
+  blacks = require('./blacks.json')
+} catch (e) {
+  console.log("黑历史文件无法正常载入，已清空")
+  saveBlacks()
 }
 
 try {
@@ -538,16 +563,24 @@ if (config.zombie) {
 delete config.zombie;
 saveConfig();
 
+
+function isCanUse(name,ul) {
+  if (!COMMANDS[name]) return false;
+  if (COMMANDS[name].level > ul) return false;
+  return true;
+}
+
 var COMMANDS = {
  help: {
     run: (args,obj,userinfo,whisper,back) => {
+      let ul=getLevel(userinfo)
       if (args[0]) {
-        if (COMMANDS[args[0]]) {
+        if (COMMANDS[args[0]] && ul >= COMMANDS[args[0]].level) {
           back(`\n### ${args[0]}\n${COMMANDS[args[0]].help}\n用法：\`${cmdstart}${args[0]} ${COMMANDS[args[0]].useage}\``)
         } else back("没有这个命令")
       } else {
-        let sortedCommands = Object.keys(COMMANDS).sort((a, b) => a.localeCompare(b))
-        back(`\n### 命令列表\n \`${sortedCommands.join("`, `")}\`\n**部分**开源在 https://github.com/cmd1152/whoami`)
+        let sortedCommands = Object.keys(COMMANDS).sort((a, b) => a.localeCompare(b)).filter((n)=>{return isCanUse(n,ul)})
+        back(`\n### 命令列表\n \`${sortedCommands.join("`, `")}\`\n使用 \`${cmdstasrt}help [命令名称]\` 查看详细帮助`)
       }
     },
     help: '显示帮助，如果传入一个命令，将显示这个命令的详细介绍，否则显示帮助列表',
@@ -780,19 +813,25 @@ var COMMANDS = {
   },
   code: {
     run: (args,obj,userinfo,whisper,back) => {
-      if (userinfo.trip !== "cmdTV+") {
-        back("Only Allow MelonCmd's")
-      } else {
-        try {
-          back(`==_√_== done.\n\`\`\`\n${JSON.stringify(eval(args.join(" ")),null,2)}`)
-        } catch (e) {
-          back(`==_×_== failed.\n\`\`\`\n${e.message}`)
-        }
+      try {
+        back(`==_√_== done.\n\`\`\`\n${JSON.stringify(eval(args.join(" ")),null,2)}`)
+      } catch (e) {
+        back(`==_×_== failed.\n\`\`\`\n${e.message}`)
       }
     },
     help: '执行代码',
     useage: '[代码]',
-    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    level: 999999999999, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 10000
+  },
+  send: {
+    run: (args,obj,userinfo,whisper,back) => {
+      if (!args.join(" ").trim()) return;
+      _chat(args.join(" "))
+    },
+    help: '发点东西',
+    useage: '[文本（允许任何字符！空格、换行或者更多！）]',
+    level: 999999999999, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 10000
   },
   kick: {
@@ -810,7 +849,7 @@ var COMMANDS = {
         if (arg == myNick) {
           info.push(`踢出 ${arg} 失败：不想自裁`)
         } else if (getInfo(arg)) {
-          if (config.modtrip.includes(userinfo.trip) && !config.modtrip.includes(getInfo(arg).trip) && getInfo(arg).uType != "mod") {
+          if ((config.modtrip.includes(userinfo.trip) || isAdmin(userinfo)) && !(config.modtrip.includes(getInfo(arg).trip) || isAdmin(getInfo(arg))) && getInfo(arg).uType != "mod") {
             kicklist.push(arg)
           } else if (getInfo(arg).trip == userinfo.trip && getInfo(arg).uType != "mod") {
             if (getInfo(arg).trip) {
@@ -822,6 +861,8 @@ var COMMANDS = {
             }
           } else if (getInfo(arg).uType == "mod") {
             info.push(`踢出 ${args} 失败：我何德何能`)
+          } else if (isAdmin(userinfo)) {
+            kicklist.push(arg)
           } else {
             if (config.modtrip.includes(userinfo.trip)) {
               info.push(`踢出 ${arg} 失败：你只能踢出同识别码的授权用户`)
@@ -856,7 +897,7 @@ var COMMANDS = {
         return arg==""?null:arg;
       })
       if (args[0]) {
-        if (['nick','hash','trip','text'].includes(args[0])) { //我感觉我是天才
+        if (['nick','hash','trip','text','color'].includes(args[0])) { //我感觉我是天才
           //config.bans[args[0]] // 我感觉我是天才
           if (args[1]) {
             let igm = args[2]?/^[igmusdy]*$/.test(args[2]):true;
@@ -887,8 +928,8 @@ var COMMANDS = {
         } else back("哥，不是这样子用")
       } else back("哥，看下帮助，这个命令有点小难")
     },
-    help: '按正则表达式封禁一个名称、识别码、用户名称，不加正则表达式为列出，再添加一次已经添加的正则表达式为删除，可以指定时间自动删除，时间超过10年为永久',
-    useage: '[nick/trip/hash/text] <正则表达式> <正则表达式标志字符串> <时间（秒）>',
+    help: '按正则表达式封禁一个名称、识别码、用户名称、颜色，不加正则表达式为列出，再添加一次已经添加的正则表达式为删除，可以指定时间自动删除，时间超过10年为永久',
+    useage: '[nick/trip/hash/text/color] <正则表达式> <正则表达式标志字符串> <时间（秒）>',
     level: 152, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 1000
   },
@@ -1123,6 +1164,15 @@ var COMMANDS = {
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 5000
   },
+  black: {
+    run: (args,obj,userinfo,whisper,back) => {
+      back(getRandomItemFromArray(blacks))
+    },
+    help: '获取黑历史',
+    useage: '',
+    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 5000
+  },
 }
 
 function getOnline(chan,name=`list${getRandomNumber(1000,9999)}`,passs='',data=false,getme=false) {
@@ -1183,9 +1233,10 @@ function checkBan() {
     if (
       testRegExps(config.bans.nick,user.nick) ||
       testRegExps(config.bans.trip,user.trip) ||
-      testRegExps(config.bans.hash,user.hash)
+      testRegExps(config.bans.hash,user.hash) ||
+      testRegExps(config.bans.color,user.color)
     ) {
-      if (!config.modtrip.includes(user.trip) && user.uType != "mod") kickuser.push(user.nick)
+      if (!config.modtrip.includes(user.trip) && user.uType != "mod" && !isAdmin(user)) kickuser.push(user.nick)
     }
   })
   if (kickuser.length > 0) {
@@ -1444,10 +1495,10 @@ ws.onmessage=(e)=>{
     }
   }
   //封禁用户支持
-  if (hc.cmd == "onlineAdd" || hc.cmd == "onlineSet") checkBan()
+  if (hc.cmd == "onlineAdd" || hc.cmd == "onlineSet" || hc.cmd == "updateUser") checkBan()
   //屏蔽词支持
   if (hc.text) {
-    if (testRegExps(config.bans.text,hc.text) && !config.modtrip.includes(hc.trip)) {
+    if (testRegExps(config.bans.text,hc.text) && !config.modtrip.includes(hc.trip) && !isAdmin(hc)) {
       _kick([`${hc.nick?hc.nick:hc.from}`],"屏蔽词")
     }
   }
@@ -1460,7 +1511,7 @@ ws.onmessage=(e)=>{
       spamhash[checkinfo] += config.rl[1] + hc.text.length * config.rl[2]
       if (spamhash[checkinfo] > config.rl[0]) {
         spamhash[checkinfo] = 0
-        if (!config.modtrip.includes(hc.trip) && getInfo(hc.nick?hc.nick:hc.from).uType != "mod") {
+        if (!config.modtrip.includes(hc.trip) && getInfo(hc.nick?hc.nick:hc.from).uType != "mod" && !isAdmin(hc)) {
           _kick([hc.nick?hc.nick:hc.from],`刷屏检测`)
         }
       }
@@ -1491,17 +1542,17 @@ ws.onmessage=(e)=>{
   if (hc.cmd == "onlineRemove") {
     delete afklist[hc.nick] //删除退出用户的afk
   }
-  if (hc.cmd == "chat") {
+  if (hc.nick && hc.text) {
     for (let k in afklist) {
       if (k == hc.nick) { //用户退出afk
         _send({
           cmd: 'chat',
-          text: `${hc.nick} ${afklist[k].do} 了 ${formatTimeDifference(afklist[k].time)} ，欢迎回来~`
+          text: `${k} ${afklist[k].do} 了 ${formatTimeDifference(afklist[k].time)} ，欢迎回来~`
         })
         delete afklist[k];
       }
       //afk用户被at
-      if (hc.text.includes(`@${k}`) && afklist[k]) {
+      if (hc.text.includes(`@${k}`) && afklist[k] && hc.nick !== myNick) {
         _send({
           cmd: 'chat',
           text: `${k} ${formatTimeDifference(afklist[k].time)} 前正在 ${afklist[k].do} ，请不要打扰TA`
@@ -1721,7 +1772,7 @@ ws.onmessage=(e)=>{
     try {
       let cmdargs = hc.text.substring(cmdstart.length).split(" ");
       let cmdname = cmdargs.shift()
-      let userlevel = ((sudoid[getInfo(hc.nick).userid] || config.modtrip.includes(hc.trip)) && hc.level < 152)?152:hc.level
+      let userlevel = getLevel(getInfo(hc.nick))
       if (!lazysend && userlevel < 152) return;
       if (isRL(COMMANDS[cmdname]) && userlevel < 152) {
         _send({
@@ -1731,12 +1782,7 @@ ws.onmessage=(e)=>{
         return;
       }
       if (COMMANDS[cmdname]) {
-        if (userlevel < COMMANDS[cmdname].level) {
-          _send({
-            cmd: 'chat',
-            text: '无权限'
-          })
-        } else {
+        if (userlevel >= COMMANDS[cmdname].level) {
           COMMANDS[cmdname].run(cmdargs,hc,getInfo(hc.nick),false,(text)=>{_send({cmd:'chat',text:text},userlevel>=152?true:false)})
         }
       }
@@ -1752,7 +1798,7 @@ ws.onmessage=(e)=>{
     try {
       let cmdargs = hc.text.substring(cmdstart.length+12+hc.from.length).split(" ");
       let cmdname = cmdargs.shift()
-      let userlevel = ((sudoid[getInfo(hc.from).userid] || config.modtrip.includes(hc.trip)) && hc.level < 152)?152:hc.level
+      let userlevel = getLevel(getInfo(hc.from))
       if (!lazysend && userlevel < 152) return;
       if (isRL(COMMANDS[cmdname]) && userlevel < 152) {
         _send({
@@ -1763,13 +1809,7 @@ ws.onmessage=(e)=>{
         return;
       }
       if (COMMANDS[cmdname]) {
-        if (userlevel < COMMANDS[cmdname].level) {
-          _send({
-            cmd: 'whisper',
-            nick: hc.from,
-            text: '无权限'
-          })
-        } else {
+        if (userlevel >= COMMANDS[cmdname].level) {
           COMMANDS[cmdname].run(cmdargs,hc,getInfo(hc.from),true,(text)=>{_send({cmd:'whisper',nick:hc.from,text:">\n"+text},userlevel>=152?true:false)})
         }
       }
