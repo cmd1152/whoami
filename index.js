@@ -1774,7 +1774,7 @@ ws.onmessage=(e)=>{
       let cmdname = cmdargs.shift()
       let userlevel = getLevel(getInfo(hc.nick))
       if (!lazysend && userlevel < 152) return;
-      if (isRL(COMMANDS[cmdname]) && userlevel < 152) {
+      if (isRL(COMMANDS[cmdname]) && userlevel < 152 && userlevel >= COMMANDS[cmdname].level) {
         _send({
           cmd: 'chat',
           text: '操作过快'
@@ -1800,7 +1800,7 @@ ws.onmessage=(e)=>{
       let cmdname = cmdargs.shift()
       let userlevel = getLevel(getInfo(hc.from))
       if (!lazysend && userlevel < 152) return;
-      if (isRL(COMMANDS[cmdname]) && userlevel < 152) {
+      if (isRL(COMMANDS[cmdname]) && userlevel < 152 && userlevel >= COMMANDS[cmdname].level) {
         _send({
           cmd: 'whisper',
           nick: hc.from,
