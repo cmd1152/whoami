@@ -1118,7 +1118,7 @@ var COMMANDS = {
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 5000
   },
-  sent: {
+  sendto: {
     run: (args,obj,userinfo,whisper,back) => {
       if (whisper) return back("不能使用私信调用");
       let datas = [...new Set(args)];
