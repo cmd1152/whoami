@@ -295,7 +295,13 @@ async function GPT(gpturl,messages,retry=0) {
       signal: controller.signal
     })
     clearTimeout(timeout);
-    let gptdata = gptreq?await gptreq.json():{};
+    let json = await gptreq.text();
+    let gptdata = json;
+    try {
+      gptdata = JSON.parse(json)
+    } catch (e) {
+      gptdata = {}
+    }
     let backttt = findAssistantContent(gptdata) || `无法找到OpenAI的答复：\n\`\`\`\n${JSON.stringify(gptdata)}`;
     if (findAssistantContent(gptdata)) {
       return {
@@ -311,7 +317,7 @@ async function GPT(gpturl,messages,retry=0) {
         }
       }
       await sleep(1000);
-      return await GPT(gpturl,messages,retry+1)
+      return await GPT(getRandomItemFromArray(config.gpt),messages,retry+1)
     }
   } catch (e) {
     if (retry >= 3) {
@@ -321,7 +327,7 @@ async function GPT(gpturl,messages,retry=0) {
       }
     }
     await sleep(1000);
-    return await GPT(gpturl,messages,retry+1)
+    return await GPT(getRandomItemFromArray(config.gpt),messages,retry+1)
   }
 }
 let lastsay = {}
