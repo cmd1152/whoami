@@ -1152,6 +1152,33 @@ var COMMANDS = {
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 5000
   },
+  asendto: {
+    run: (args,obj,userinfo,whisper,back) => {
+      let datas = [...new Set(args)];
+      if (datas.length < 2) return back("参数不足");
+      let jchannel = encodeURIComponent(datas.shift());
+      datas = datas.join(" ");
+      if (typeof jchannel !== 'string') return back("无效频道名称");
+      if (jchannel === '') return back("无效频道名称");
+      if (jchannel.length > 120) return back("无效频道长度");
+      if (!config.useproxy) return back("内部无代理选项");
+      if (datas.length > 3000) return back("发送的内容不能超过 3000 字符")
+      getOnline(jchannel,`message${getRandomNumber(1000,9999)}`,'',{
+        cmd: 'chat',
+        text: `**Anonymous User sent a message from ?${obj.channel} :**\n${datas}`
+      })
+      .then((list)=>{
+        back(`@**${userinfo.nick}** 成功发送消息，${list.length} 个用户将看见你的消息`)
+      })
+      .catch((e)=>{
+        back(`@**${userinfo.nick}** 无法发送消息：${e.message||e}`)
+      })
+    },
+    help: '==匿名==发送一个消息到指定频道',
+    useage: '[频道（空格等特殊字符需要 encodeURIComponent）] [内容（允许任何字符！空格、换行或者更多！）]',
+    level: 152, //100 普通用户 152 授权用户 999以上的基本mod
+    rl: 5000
+  },
   trip: {
     run: (args,obj,userinfo,whisper,back) => {
       let passs = args.join(" ");
