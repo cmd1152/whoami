@@ -269,6 +269,17 @@ gpthis.get().map((his)=>{return JSON.stringify(his)})`
     return;
   }
 }
+
+function isJSONString(str) {
+    try {
+        JSON.parse(str);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+
 async function GPT(gpturl,messages,retry=0) {
   try {
     let controller = new AbortController();
@@ -297,12 +308,11 @@ async function GPT(gpturl,messages,retry=0) {
     clearTimeout(timeout);
     let json = await gptreq.text();
     let gptdata = json;
-    try {
-      gptdata = JSON.parse(json)
-    } catch (e) {
-      gptdata = {}
-    }
-    let backttt = findAssistantContent(gptdata) || `无法找到OpenAI的答复：\n\`\`\`\n${JSON.stringify(gptdata)}`;
+    let backttt;
+    if (isJSONString(gptdata)) {
+      gptdata = JSON.parse(gptdata);
+      backttt = findAssistantContent(gptdata) || `无法找到OpenAI的答复：\n\`\`\`\n${JSON.stringify(gptdata)}`;
+    } else backttt = gptdata;
     if (findAssistantContent(gptdata)) {
       return {
         ok: true,
