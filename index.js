@@ -409,13 +409,17 @@ async function ChatGPT(message,hc) {
     role: 'user',
     content: message
   }
-  gptuserid[userid].forEach(msg=>{
-    messages.push(msg);
-  })
   messages.push({
     role: "user",
     content: `你叫whoami，一个MelonCmd制作的机器人，我要查看你的帮助可以发送!help，你现在在Hack.Chat（简称HC）聊天室的lounge（简称lo）频道，你的语言要简短，我叫 ${hc.nick} ，下面是我公开的信息（nick名称、hash哈希、trip识别码、level用户等级、uType用户类型、color用户名颜色、userid用户标识符）：
 ${JSON.stringify(getInfo(hc.nick),null,2)}`
+  })
+  messages.push({
+    role: 'assistant',
+    content: '好的，我了解了'
+  })
+  gptuserid[userid].forEach(msg=>{
+    messages.push(msg);
   })
   messages.push(puro);
   let customId = Math.floor(Math.random()*100000).toString()
