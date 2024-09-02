@@ -1,0 +1,16 @@
+logs/
+config.json
+config.json_
+lookup.json
+node_modules/
+msg.json
+user.json
+mods/
+proxys.txt
+old.txt
+afklist.json
+coin.json
+welc.json
+blacks.json
+package.json
+package-lock.json
