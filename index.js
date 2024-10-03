@@ -1,6 +1,6 @@
 ﻿﻿const websocket = require('ws');
 const axios = require('axios');
-const notere = require('./notere.js');
+const notems = require('./notems_fix.js');
 const fs = require('fs');
 const cheerio = require('cheerio');
 const path = require('path');
@@ -702,56 +702,6 @@ function discap() {
     text: '.m disablecap'
   }, true)
 }
-//hackchatloungeuserlist读取支持
-function parseUserList(rawData) {
-  const transformedData = {};
-  rawData.forEach(entry => {
-    const userInfo = {};
-    const lines = entry.split('\n');
-    const evaluations = [];
-    let startEval = false
-    lines.forEach(line => {
-      const [key, value] = line.split('：');
-      if (key === "用户名") {
-        const username = value.split('（')[0];
-        userInfo.username = username;
-      } else if (key === "昵称/别名") {
-        const nicknames = value.split(/[,，。、!?;:；…\s]/).filter(sbcnm=>{return sbcnm})
-        userInfo.nick = nicknames;
-      } else if (key === "常用trip") {
-        const trips = value.split(/[.,，。、;；…\s]/).filter(sbcnm=>{return sbcnm})
-        userInfo.trip = trips;
-      } else if (key === "年龄") {
-        userInfo.age = value;
-      } else if (key === "性别") {
-        userInfo.gender = value;
-      } else if (key === "描述") {
-        const description = value.split(/[.,，。、!?;:；…\s]/).filter(sbcnm=>{return sbcnm})
-        userInfo.description = description.filter(Boolean);
-      } else if (key === "评价") {
-        startEval = true
-      } else if (startEval) {
-        if (key && value) {
-          evaluations.push({ [key]: value});
-        }
-      }
-    });
-
-    userInfo.evaluation = evaluations;
-    transformedData[userInfo.username] = userInfo;
-  });
-
-  return transformedData;
-}
-function parseUseData(data) {
-  return data.split("\n\n").filter(o=>{return o.trim().startsWith("用户名：")})
-}
-function getNewData() {
-  return new Promise((resolve) => {
-    resolve(false)
-  })
-}
-
 
 function formatTime() {
     const now = new Date();
@@ -1058,54 +1008,6 @@ var COMMANDS = {
     useage: '<用户名称>',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 500,
-  },
-  tellabout: {
-    run: (args,obj,userinfo,whisper,back,showcmdstart) => {
-      if (!args[0]) {
-        back("参数无效")
-        return;
-      }
-      if (args[0].length == 6) {
-        back("正在更新数据库并查询")
-        function checknow() {
-          let finddata = []
-          for (k in userList) {
-            if (userList[k].trip) {
-              if (userList[k].trip.includes(args[0])) finddata.push(userList[k])
-            }
-          }
-          if (finddata.length == 0) {
-            back("数据库中找不到这个识别码的信息")
-            return;
-          }
-          let sb = []
-          finddata.forEach(fd=>{
-            let pj = []
-            fd.evaluation.forEach(pja=>{
-              pj.push(`\`${Object.keys(pja)[0]}\`：\`${pja[Object.keys(pja)[0]]}\``)
-            })
-            sb.push(`用户名：\`${fd.username}\`\n别称：\`${fd.nick.join("`, `")}\`\n识别码：\`${fd.trip.join("`, `")}\`\n年龄：\`${fd.age}\`\n性别：\`${fd.gender}\`\n描述：\`${fd.description.join("`, `")}\`\n评价：\n${pj.join("\n")}`)
-          })
-          back(sb.join("\n·\n"))
-        }
-        getNewData()
-          .then((data)=>{
-            if (typeof data == "object") {
-              userList = data
-              saveUser()
-            } else back("更新失败，使用缓存数据")
-            checknow()
-          })
-          .catch((e)=>{
-            back("更新失败，使用缓存数据")
-            checknow()
-          })
-      } else back(`识别码无效`)
-    },
-    help: '连接hackchatloungeuserlist查询一个用户的信息',
-    useage: '[识别码]',
-    level: 100, //100 普通用户 152 授权用户 999以上的基本mod
-    rl: 10000,
   },
   setu: {
     run: (args,obj,userinfo,whisper,back,showcmdstart) => {
@@ -2605,13 +2507,13 @@ ws.onmessage=(e)=>{
       if (sendly.length > 1152) {
         let notepath = `message${Math.floor(Math.random()*99999999999999999-10000000000000000)+10000000000000000}`
         let pnotepath = `message${Math.floor(Math.random()*99999999999999999-10000000000000000)+10000000000000000}`
-        notere.set(notepath,sendly)
+        notems.set(notepath,sendly)
         .then(()=>{
-          notere.set(pnotepath,sendly)
+          notems.set(pnotepath,sendly)
           .then(()=>{
             _send({
               cmd: 'chat',
-              text: `@${hc.nick} 你的人缘太好了，留言的内容太长了，为了防止其他人篡改你的留言，NoteMs地址私信发送给您，[而这个是公开的副本](https://note.re/${pnotepath})，容易被篡改`
+              text: `@${hc.nick} 你的人缘太好了，留言的内容太长了，为了防止其他人篡改你的留言，NoteMs地址私信发送给您，[而这个是公开的副本](https://note.ms/${pnotepath})，容易被篡改`
             })
           })
           .catch((e)=>{
@@ -2623,7 +2525,7 @@ ws.onmessage=(e)=>{
           _send({
             cmd: 'whisper',
             nick: hc.nick,
-            text: `你的人缘太好了，留言的内容太长了，[请手动点此查看！](https://note.re/${notepath})`
+            text: `你的人缘太好了，留言的内容太长了，[请手动点此查看！](https://note.ms/${notepath})`
           })
         })
         .catch((e)=>{
@@ -2658,12 +2560,12 @@ ws.onmessage=(e)=>{
       let sendly = sendmessage.join("\n")
       if (sendly.length > 1152) {
         let notepath = `message${Math.floor(Math.random()*99999999999999999-10000000000000000)+10000000000000000}`
-        notere.set(notepath,sendly)
+        notems.set(notepath,sendly)
         .then(()=>{
           _send({
             cmd: 'whisper',
             nick: hc.nick,
-            text: `你的人缘太好了，留言的内容太长了，[请手动点此查看！](https://note.re/${notepath})`
+            text: `你的人缘太好了，留言的内容太长了，[请手动点此查看！](https://note.ms/${notepath})`
           })
         })
         .catch((e)=>{

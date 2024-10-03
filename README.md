@@ -5,6 +5,7 @@
 ```
 git clone https://github.com/cmd1152/whoami
 cd whoami
+ren notems.js notems_fix.js
 npm install
 pm2 start index.js
 ```
