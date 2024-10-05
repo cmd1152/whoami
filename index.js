@@ -1561,6 +1561,7 @@ var COMMANDS = {
     rl: 2000,
     needproxy: true,
   },
+/*
   bf: {
     run: (args,obj,userinfo,whisper,back,showcmdstart) => {
       let bfinput = [...args];
@@ -1581,7 +1582,7 @@ var COMMANDS = {
     useage: '[BraionFuck Code] <input>',
     level: 100, //100 普通用户 152 授权用户 999以上的基本mod
     rl: 2000,
-  },
+  },*/
   today: {
     run: (args,obj,userinfo,whisper,back,showcmdstart) => {
       let filtertype = 'event';
